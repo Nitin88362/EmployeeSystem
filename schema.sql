@@ -1,16 +1,16 @@
 -- ============================================================
--- EDITONE HRMS DATABASE SCHEMA - PostgreSQL Version
+-- EDITONE HRMS DATABASE SCHEMA - MySQL Version
 -- Naraina Industrial Area, New Delhi · Est. 1999
--- Run: psql -U postgres -d postgres -f schema_postgresql.sql
+-- Run: mysql -u root -p < schema.sql
 -- ============================================================
 
 DROP DATABASE IF EXISTS editone_hrms;
-CREATE DATABASE editone_hrms;
-\c editone_hrms;
+CREATE DATABASE editone_hrms CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE editone_hrms;
 
 -- Admin users
 CREATE TABLE admin (
-  id SERIAL PRIMARY KEY,
+  id INT PRIMARY KEY AUTO_INCREMENT,
   username VARCHAR(50) UNIQUE NOT NULL,
   password_hash VARCHAR(255) NOT NULL,
   name VARCHAR(100),
@@ -31,7 +31,7 @@ CREATE TABLE config (
   office_lat DECIMAL(10,7) DEFAULT 28.6448000,
   office_lng DECIMAL(10,7) DEFAULT 77.1391000,
   max_distance INT DEFAULT 500,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
 -- Leave types config
@@ -76,7 +76,7 @@ CREATE TABLE qr_codes (
 
 -- Attendance records
 CREATE TABLE attendance (
-  id SERIAL PRIMARY KEY,
+  id INT PRIMARY KEY AUTO_INCREMENT,
   employee_id VARCHAR(20) REFERENCES employees(id),
   date DATE NOT NULL,
   check_in TIME,
@@ -95,7 +95,7 @@ CREATE TABLE attendance (
 
 -- Leave applications
 CREATE TABLE leaves (
-  id SERIAL PRIMARY KEY,
+  id INT PRIMARY KEY AUTO_INCREMENT,
   employee_id VARCHAR(20) REFERENCES employees(id),
   leave_type VARCHAR(20) REFERENCES leave_types(id),
   start_date DATE NOT NULL,
@@ -110,7 +110,7 @@ CREATE TABLE leaves (
 
 -- Holidays
 CREATE TABLE holidays (
-  id SERIAL PRIMARY KEY,
+  id INT PRIMARY KEY AUTO_INCREMENT,
   name VARCHAR(100) NOT NULL,
   date DATE UNIQUE NOT NULL,
   type VARCHAR(20) DEFAULT 'national',
@@ -119,7 +119,7 @@ CREATE TABLE holidays (
 
 -- Payroll
 CREATE TABLE payroll (
-  id SERIAL PRIMARY KEY,
+  id INT PRIMARY KEY AUTO_INCREMENT,
   employee_id VARCHAR(20) REFERENCES employees(id),
   month INT NOT NULL,
   year INT NOT NULL,
@@ -144,7 +144,7 @@ CREATE TABLE payroll (
 
 -- Notices
 CREATE TABLE notices (
-  id SERIAL PRIMARY KEY,
+  id INT PRIMARY KEY AUTO_INCREMENT,
   title VARCHAR(200) NOT NULL,
   content TEXT NOT NULL,
   priority VARCHAR(20) DEFAULT 'normal',
@@ -156,7 +156,7 @@ CREATE TABLE notices (
 
 -- Attendance regularizations
 CREATE TABLE regularizations (
-  id SERIAL PRIMARY KEY,
+  id INT PRIMARY KEY AUTO_INCREMENT,
   employee_id VARCHAR(20) REFERENCES employees(id),
   date DATE NOT NULL,
   check_in TIME,
@@ -213,5 +213,3 @@ CREATE INDEX idx_leaves_employee ON leaves(employee_id);
 CREATE INDEX idx_payroll_employee_month_year ON payroll(employee_id, month, year);
 CREATE INDEX idx_employees_department ON employees(department);
 CREATE INDEX idx_qr_codes_date ON qr_codes(qr_date);
-
-COMMIT;

@@ -1,10 +1,10 @@
 // ============================================================
-// EDITONE HRMS — Backend Server (PostgreSQL Version)
-// Express + PostgreSQL + JWT
+// EDITONE HRMS — Backend Server (MySQL Version with SSL)
+// Express + MySQL + JWT
 // ============================================================
 require('dotenv').config();
 const express = require('express');
-const pg = require('pg');
+const mysql = require('mysql2/promise');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
@@ -20,16 +20,13 @@ app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Database pool
-const pool = new pg.Pool({
-  host: process.env.DB_HOST || 'localhost',
-  port: process.env.DB_PORT || 5432,
-  user: process.env.DB_USER || 'postgres',
-  password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_NAME || 'editone_hrms',
-  max: 10,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
+// Database pool with SSL for Aiven
+const pool = mysql.createPool({
+  host: process.env.DB_HOST,
+  port: process.env.DB_PORT,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
   ssl: {
     rejectUnauthorized: false
   }
@@ -63,7 +60,7 @@ function auth(allowedRoles = ['admin', 'employee']) {
 app.post('/api/auth/admin-login', async (req, res) => {
   try {
     const { username, password } = req.body;
-    const { rows } = await pool.query('SELECT * FROM admin WHERE username = $1', [username]);
+    const [rows] = await pool.execute('SELECT * FROM admin WHERE username = ?', [username]);
     if (rows.length === 0) return res.status(401).json({ error: 'Invalid credentials' });
     const admin = rows[0];
     const ok = await bcrypt.compare(password, admin.password_hash);
@@ -76,7 +73,7 @@ app.post('/api/auth/admin-login', async (req, res) => {
 app.post('/api/auth/employee-login', async (req, res) => {
   try {
     const { email, password } = req.body;
-    const { rows } = await pool.query('SELECT * FROM employees WHERE email = $1', [email.toLowerCase()]);
+    const [rows] = await pool.execute('SELECT * FROM employees WHERE email = ?', [email.toLowerCase()]);
     if (rows.length === 0) return res.status(401).json({ error: 'Invalid credentials' });
     const emp = rows[0];
     const ok = await bcrypt.compare(password, emp.password_hash);
@@ -89,10 +86,10 @@ app.post('/api/auth/employee-login', async (req, res) => {
 app.get('/api/auth/me', auth(), async (req, res) => {
   try {
     if (req.user.role === 'admin') {
-      const { rows } = await pool.query('SELECT id, username, name, email FROM admin WHERE id = $1', [req.user.id]);
+      const [rows] = await pool.execute('SELECT id, username, name, email FROM admin WHERE id = ?', [req.user.id]);
       return res.json({ ...rows[0], role: 'admin' });
     } else {
-      const { rows } = await pool.query('SELECT * FROM employees WHERE id = $1', [req.user.id]);
+      const [rows] = await pool.execute('SELECT * FROM employees WHERE id = ?', [req.user.id]);
       return res.json(empToJSON(rows[0]));
     }
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -102,7 +99,7 @@ app.get('/api/auth/me', auth(), async (req, res) => {
 // CONFIG
 // ============================================================
 app.get('/api/config', auth(), async (req, res) => {
-  const { rows } = await pool.query('SELECT * FROM config WHERE id = $1', [1]);
+  const [rows] = await pool.execute('SELECT * FROM config WHERE id = 1');
   const c = rows[0] || {};
   res.json({
     officeIn: c.office_in?.substring(0,5) || '09:00',
@@ -121,9 +118,9 @@ app.get('/api/config', auth(), async (req, res) => {
 app.put('/api/config', auth(['admin']), async (req, res) => {
   try {
     const c = req.body;
-    await pool.query(
-      `UPDATE config SET office_in=$1, office_out=$2, overtime_cap=$3, grace_period=$4, working_days=$5, ot_rate=$6,
-        office_name=$7, office_lat=$8, office_lng=$9, max_distance=$10 WHERE id=$11`,
+    await pool.execute(
+      `UPDATE config SET office_in=?, office_out=?, overtime_cap=?, grace_period=?, working_days=?, ot_rate=?,
+        office_name=?, office_lat=?, office_lng=?, max_distance=? WHERE id=1`,
       [c.officeIn, c.officeOut, c.overtimeCap, c.gracePeriod, c.workingDays, c.otRate,
        c.officeName, c.officeLat, c.officeLng, c.maxDistance, 1]
     );
@@ -133,7 +130,7 @@ app.put('/api/config', auth(['admin']), async (req, res) => {
 
 // Leave Types
 app.get('/api/leave-types', auth(), async (req, res) => {
-  const { rows } = await pool.query('SELECT * FROM leave_types ORDER BY sort_order');
+  const [rows] = await pool.execute('SELECT * FROM leave_types ORDER BY sort_order');
   res.json(rows.map(r => ({ id: r.id, name: r.name, annual: r.annual_quota, color: r.color, paid: !!r.is_paid })));
 });
 
@@ -141,27 +138,27 @@ app.get('/api/leave-types', auth(), async (req, res) => {
 // DEPARTMENTS
 // ============================================================
 app.get('/api/departments', auth(), async (req, res) => {
-  const { rows } = await pool.query('SELECT * FROM departments ORDER BY name');
+  const [rows] = await pool.execute('SELECT * FROM departments ORDER BY name');
   res.json(rows);
 });
 
 app.post('/api/departments', auth(['admin']), async (req, res) => {
   try {
     const id = uid();
-    await pool.query('INSERT INTO departments (id, name) VALUES ($1, $2)', [id, req.body.name]);
+    await pool.execute('INSERT INTO departments (id, name) VALUES (?, ?)', [id, req.body.name]);
     res.json({ id, ...req.body });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.put('/api/departments/:id', auth(['admin']), async (req, res) => {
   try {
-    await pool.query('UPDATE departments SET name=$1 WHERE id=$2', [req.body.name, req.params.id]);
+    await pool.execute('UPDATE departments SET name=? WHERE id=?', [req.body.name, req.params.id]);
     res.json({ success: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.delete('/api/departments/:id', auth(['admin']), async (req, res) => {
-  await pool.query('DELETE FROM departments WHERE id=$1', [req.params.id]);
+  await pool.execute('DELETE FROM departments WHERE id=?', [req.params.id]);
   res.json({ success: true });
 });
 
@@ -183,13 +180,13 @@ function empToJSON(emp) {
 }
 
 app.get('/api/employees', auth(['admin']), async (req, res) => {
-  const { rows } = await pool.query('SELECT * FROM employees ORDER BY name');
+  const [rows] = await pool.execute('SELECT * FROM employees ORDER BY name');
   res.json(rows.map(empToJSON));
 });
 
 app.get('/api/employees/:id', auth(), async (req, res) => {
   if (req.user.role === 'employee' && req.user.id !== req.params.id) return res.status(403).json({ error: 'Forbidden' });
-  const { rows } = await pool.query('SELECT * FROM employees WHERE id=$1', [req.params.id]);
+  const [rows] = await pool.execute('SELECT * FROM employees WHERE id=?', [req.params.id]);
   if (rows.length === 0) return res.status(404).json({ error: 'Not found' });
   res.json(empToJSON(rows[0]));
 });
@@ -199,9 +196,9 @@ app.post('/api/employees', auth(['admin']), async (req, res) => {
     const e = req.body;
     const id = uid();
     const pwHash = await bcrypt.hash(e.password || 'changeme123', 10);
-    await pool.query(
+    await pool.execute(
       `INSERT INTO employees (id, name, email, phone, department, designation, ctc, doj, password_hash, is_active)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [id, e.name, e.email.toLowerCase(), e.phone, e.department, e.designation, e.ctc, e.doj, pwHash, true]
     );
     res.json({ id, ...e });
@@ -215,40 +212,40 @@ app.put('/api/employees/:id', auth(), async (req, res) => {
       const fields = [];
       const params = [];
       
-      if (e.name !== undefined) { fields.push('name = $' + (fields.length + 1)); params.push(e.name); }
-      if (e.phone !== undefined) { fields.push('phone = $' + (fields.length + 1)); params.push(e.phone); }
-      if (e.department !== undefined) { fields.push('department = $' + (fields.length + 1)); params.push(e.department); }
-      if (e.designation !== undefined) { fields.push('designation = $' + (fields.length + 1)); params.push(e.designation); }
-      if (e.ctc !== undefined) { fields.push('ctc = $' + (fields.length + 1)); params.push(e.ctc); }
-      if (e.doj !== undefined) { fields.push('doj = $' + (fields.length + 1)); params.push(e.doj); }
-      if (e.is_active !== undefined) { fields.push('is_active = $' + (fields.length + 1)); params.push(e.is_active); }
+      if (e.name !== undefined) { fields.push('name = ?'); params.push(e.name); }
+      if (e.phone !== undefined) { fields.push('phone = ?'); params.push(e.phone); }
+      if (e.department !== undefined) { fields.push('department = ?'); params.push(e.department); }
+      if (e.designation !== undefined) { fields.push('designation = ?'); params.push(e.designation); }
+      if (e.ctc !== undefined) { fields.push('ctc = ?'); params.push(e.ctc); }
+      if (e.doj !== undefined) { fields.push('doj = ?'); params.push(e.doj); }
+      if (e.is_active !== undefined) { fields.push('is_active = ?'); params.push(e.is_active); }
       if (e.password) {
-        fields.push('password_hash = $' + (fields.length + 1));
+        fields.push('password_hash = ?');
         params.push(await bcrypt.hash(e.password, 10));
       }
       
       params.push(req.params.id);
-      await pool.query(`UPDATE employees SET ${fields.join(', ')} WHERE id = $${fields.length + 1}`, params);
+      await pool.execute(`UPDATE employees SET ${fields.join(', ')} WHERE id = ?`, params);
     } else {
       // Employee self-edit (limited fields)
       const fields = [];
       const params = [];
       
-      if (e.phone !== undefined) { fields.push('phone = $' + (fields.length + 1)); params.push(e.phone); }
+      if (e.phone !== undefined) { fields.push('phone = ?'); params.push(e.phone); }
       if (e.password) {
-        fields.push('password_hash = $' + (fields.length + 1));
+        fields.push('password_hash = ?');
         params.push(await bcrypt.hash(e.password, 10));
       }
       
       params.push(req.params.id);
-      await pool.query(`UPDATE employees SET ${fields.join(', ')} WHERE id = $${fields.length + 1}`, params);
+      await pool.execute(`UPDATE employees SET ${fields.join(', ')} WHERE id = ?`, params);
     }
     res.json({ success: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.delete('/api/employees/:id', auth(['admin']), async (req, res) => {
-  await pool.query('DELETE FROM employees WHERE id=$1', [req.params.id]);
+  await pool.execute('DELETE FROM employees WHERE id=?', [req.params.id]);
   res.json({ success: true });
 });
 
@@ -257,10 +254,10 @@ app.delete('/api/employees/:id', auth(['admin']), async (req, res) => {
 // ============================================================
 app.get('/api/qr/today', auth(), async (req, res) => {
   const t = todayStr();
-  let { rows } = await pool.query('SELECT * FROM qr_codes WHERE qr_date = $1', [t]);
+  let [rows] = await pool.execute('SELECT * FROM qr_codes WHERE qr_date = ?', [t]);
   if (rows.length === 0) {
     const code = 'EDITONE-' + t + '-' + uid().toUpperCase();
-    await pool.query('INSERT INTO qr_codes (id, qr_date, qr_secret) VALUES ($1, $2, $3)', [uid(), t, code]);
+    await pool.execute('INSERT INTO qr_codes (id, qr_date, qr_secret) VALUES (?, ?, ?)', [uid(), t, code]);
     return res.json({ date: t, code });
   }
   res.json({ date: rows[0].qr_date.toISOString().split('T')[0], code: rows[0].qr_secret });
@@ -269,7 +266,7 @@ app.get('/api/qr/today', auth(), async (req, res) => {
 app.post('/api/qr/refresh', auth(['admin']), async (req, res) => {
   const t = todayStr();
   const code = 'EDITONE-' + t + '-' + uid().toUpperCase();
-  await pool.query('INSERT INTO qr_codes (id, qr_date, qr_secret) VALUES ($1, $2, $3) ON CONFLICT (qr_date) DO UPDATE SET qr_secret = $3', [uid(), t, code]);
+  await pool.execute('REPLACE INTO qr_codes (id, qr_date, qr_secret) VALUES (?, ?, ?)', [uid(), t, code]);
   res.json({ date: t, code });
 });
 
@@ -299,24 +296,24 @@ app.get('/api/attendance', auth(), async (req, res) => {
   let params = [];
   
   if (req.user.role === 'employee') {
-    sql += ' AND employee_id = $1';
+    sql += ' AND employee_id = ?';
     params.push(req.user.id);
   }
   if (req.query.employeeId) {
-    sql += ' AND employee_id = $' + (params.length + 1);
+    sql += ' AND employee_id = ?';
     params.push(req.query.employeeId);
   }
   if (req.query.from) { 
-    sql += ' AND date >= $' + (params.length + 1); 
+    sql += ' AND date >= ?'; 
     params.push(req.query.from); 
   }
   if (req.query.to) { 
-    sql += ' AND date <= $' + (params.length + 1); 
+    sql += ' AND date <= ?'; 
     params.push(req.query.to); 
   }
   sql += ' ORDER BY date DESC';
   
-  const { rows } = await pool.query(sql, params);
+  const [rows] = await pool.execute(sql, params);
   res.json(rows.map(attToJSON));
 });
 
@@ -326,26 +323,26 @@ app.post('/api/attendance/scan', auth(['employee']), async (req, res) => {
     const t = todayStr();
     
     // Verify QR
-    const { rows: qrRows } = await pool.query('SELECT qr_secret FROM qr_codes WHERE qr_date = $1', [t]);
+    const [qrRows] = await pool.execute('SELECT qr_secret FROM qr_codes WHERE qr_date = ?', [t]);
     if (qrRows.length === 0 || qrRows[0].qr_secret !== qrCode) {
       return res.status(400).json({ error: 'Invalid or expired QR code' });
     }
     
     // Get config
-    const { rows: cfgRows } = await pool.query('SELECT * FROM config WHERE id = $1', [1]);
+    const [cfgRows] = await pool.execute('SELECT * FROM config WHERE id = 1');
     const cfg = cfgRows[0] || {};
     
     const now = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false });
     
     // Check existing
-    const { rows: existing } = await pool.query('SELECT * FROM attendance WHERE employee_id = $1 AND date = $2', [req.user.id, t]);
+    const [existing] = await pool.execute('SELECT * FROM attendance WHERE employee_id = ? AND date = ?', [req.user.id, t]);
     
     if (existing.length === 0) {
       // Check-in
       const lateBy = now > cfg.office_in ? Math.floor((new Date('2023-01-01 ' + now) - new Date('2023-01-01 ' + cfg.office_in)) / 60000) : 0;
-      await pool.query(
+      await pool.execute(
         `INSERT INTO attendance (employee_id, date, check_in, location_lat, location_lng, location_accuracy, qr_id, late_by, status)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [req.user.id, t, now, location?.lat, location?.lng, location?.accuracy, qrCode, lateBy, 'present']
       );
       res.json({ action: 'check-in', time: now, lateBy });
@@ -353,9 +350,9 @@ app.post('/api/attendance/scan', auth(['employee']), async (req, res) => {
       // Check-out
       const earlyBy = now < cfg.office_out ? Math.floor((new Date('2023-01-01 ' + cfg.office_out) - new Date('2023-01-01 ' + now)) / 60000) : 0;
       const overtime = now > cfg.overtime_cap ? Math.floor((new Date('2023-01-01 ' + now) - new Date('2023-01-01 ' + cfg.overtime_cap)) / 60000) : 0;
-      await pool.query(
-        `UPDATE attendance SET check_out = $1, location_lat = $2, location_lng = $3, location_accuracy = $4, early_by = $5, overtime = $6
-         WHERE employee_id = $7 AND date = $8`,
+      await pool.execute(
+        `UPDATE attendance SET check_out = ?, location_lat = ?, location_lng = ?, location_accuracy = ?, early_by = ?, overtime = ?
+         WHERE employee_id = ? AND date = ?`,
         [now, location?.lat, location?.lng, location?.accuracy, earlyBy, overtime, req.user.id, t]
       );
       res.json({ action: 'check-out', time: now, earlyBy, overtime });
@@ -371,16 +368,16 @@ app.get('/api/leaves', auth(), async (req, res) => {
   let params = [];
   
   if (req.user.role === 'employee') {
-    sql += ' AND employee_id = $1';
+    sql += ' AND employee_id = ?';
     params.push(req.user.id);
   }
   if (req.query.status) {
-    sql += ' AND status = $' + (params.length + 1);
+    sql += ' AND status = ?';
     params.push(req.query.status);
   }
   sql += ' ORDER BY created_at DESC';
   
-  const { rows } = await pool.query(sql, params);
+  const [rows] = await pool.execute(sql, params);
   res.json(rows);
 });
 
@@ -388,9 +385,9 @@ app.post('/api/leaves', auth(['employee']), async (req, res) => {
   try {
     const l = req.body;
     const days = Math.ceil((new Date(l.end) - new Date(l.start)) / (1000*60*60*24)) + 1;
-    await pool.query(
+    await pool.execute(
       `INSERT INTO leaves (employee_id, leave_type, start_date, end_date, days, reason, status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [req.user.id, l.type, l.start, l.end, days, l.reason, 'pending']
     );
     res.json({ success: true });
@@ -398,8 +395,8 @@ app.post('/api/leaves', auth(['employee']), async (req, res) => {
 });
 
 app.put('/api/leaves/:id/decision', auth(['admin']), async (req, res) => {
-  await pool.query(
-    'UPDATE leaves SET status = $1, approved_by = $2, approved_at = CURRENT_TIMESTAMP WHERE id = $3',
+  await pool.execute(
+    'UPDATE leaves SET status = ?, approved_by = ?, approved_at = CURRENT_TIMESTAMP WHERE id = ?',
     [req.body.decision, req.user.id, req.params.id]
   );
   res.json({ success: true });
@@ -409,17 +406,17 @@ app.put('/api/leaves/:id/decision', auth(['admin']), async (req, res) => {
 // HOLIDAYS
 // ============================================================
 app.get('/api/holidays', auth(), async (req, res) => {
-  const { rows } = await pool.query('SELECT * FROM holidays ORDER BY date');
+  const [rows] = await pool.execute('SELECT * FROM holidays ORDER BY date');
   res.json(rows);
 });
 
 app.post('/api/holidays', auth(['admin']), async (req, res) => {
-  await pool.query('INSERT INTO holidays (name, date, type) VALUES ($1, $2, $3)', [req.body.name, req.body.date, req.body.type || 'national']);
+  await pool.execute('INSERT INTO holidays (name, date, type) VALUES (?, ?, ?)', [req.body.name, req.body.date, req.body.type || 'national']);
   res.json({ success: true });
 });
 
 app.delete('/api/holidays/:id', auth(['admin']), async (req, res) => {
-  await pool.query('DELETE FROM holidays WHERE id = $1', [req.params.id]);
+  await pool.execute('DELETE FROM holidays WHERE id = ?', [req.params.id]);
   res.json({ success: true });
 });
 
@@ -431,35 +428,35 @@ app.get('/api/payroll', auth(), async (req, res) => {
   let params = [];
   
   if (req.user.role === 'employee') {
-    sql += ' AND employee_id = $1';
+    sql += ' AND employee_id = ?';
     params.push(req.user.id);
   }
   if (req.query.employeeId) {
-    sql += ' AND employee_id = $' + (params.length + 1);
+    sql += ' AND employee_id = ?';
     params.push(req.query.employeeId);
   }
   if (req.query.month) {
-    sql += ' AND month = $' + (params.length + 1);
+    sql += ' AND month = ?';
     params.push(req.query.month);
   }
   if (req.query.year) {
-    sql += ' AND year = $' + (params.length + 1);
+    sql += ' AND year = ?';
     params.push(req.query.year);
   }
   sql += ' ORDER BY year DESC, month DESC';
   
-  const { rows } = await pool.query(sql, params);
+  const [rows] = await pool.execute(sql, params);
   res.json(rows);
 });
 
 app.post('/api/payroll/process', auth(['admin']), async (req, res) => {
   try {
     const { employeeId, month, year } = req.body;
-    const emp = await pool.query('SELECT * FROM employees WHERE id = $1', [employeeId]);
+    const [emp] = await pool.execute('SELECT * FROM employees WHERE id = ?', [employeeId]);
     
-    if (emp.rows.length === 0) return res.status(404).json({ error: 'Employee not found' });
+    if (emp.length === 0) return res.status(404).json({ error: 'Employee not found' });
     
-    const e = emp.rows[0];
+    const e = emp[0];
     const basic = parseFloat(e.ctc) * 0.4;
     const hra = basic * 0.4;
     const conveyance = 1600;
@@ -474,14 +471,14 @@ app.post('/api/payroll/process', auth(['admin']), async (req, res) => {
     const total = pf + esi + pt + tds;
     const net = gross - total;
     
-    await pool.query(
+    await pool.execute(
       `INSERT INTO payroll (employee_id, month, year, basic_salary, hra, conveyance, medical, special_allowance, 
        gross_salary, pf_deduction, esi_deduction, professional_tax, tds, other_deductions, total_deductions, net_salary, status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
-       ON CONFLICT (employee_id, month, year) DO UPDATE SET
-       basic_salary = $4, hra = $5, conveyance = $6, medical = $7, special_allowance = $8,
-       gross_salary = $9, pf_deduction = $10, esi_deduction = $11, professional_tax = $12, tds = $13,
-       other_deductions = $14, total_deductions = $15, net_salary = $16, status = $17`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE
+       basic_salary = VALUES(basic_salary), hra = VALUES(hra), conveyance = VALUES(conveyance), medical = VALUES(medical), special_allowance = VALUES(special_allowance),
+       gross_salary = VALUES(gross_salary), pf_deduction = VALUES(pf_deduction), esi_deduction = VALUES(esi_deduction), professional_tax = VALUES(professional_tax), tds = VALUES(tds),
+       other_deductions = VALUES(other_deductions), total_deductions = VALUES(total_deductions), net_salary = VALUES(net_salary), status = VALUES(status)`,
       [employeeId, month, year, basic, hra, conveyance, medical, special, gross, pf, esi, pt, tds, 0, total, net, 'draft']
     );
     
@@ -490,12 +487,12 @@ app.post('/api/payroll/process', auth(['admin']), async (req, res) => {
 });
 
 app.put('/api/payroll/:id/pay', auth(['admin']), async (req, res) => {
-  await pool.query('UPDATE payroll SET status = $1, paid_at = CURRENT_TIMESTAMP WHERE id = $2', ['paid', req.params.id]);
+  await pool.execute('UPDATE payroll SET status = ?, paid_at = CURRENT_TIMESTAMP WHERE id = ?', ['paid', req.params.id]);
   res.json({ success: true });
 });
 
 app.delete('/api/payroll/:id', auth(['admin']), async (req, res) => {
-  await pool.query('DELETE FROM payroll WHERE id = $1', [req.params.id]);
+  await pool.execute('DELETE FROM payroll WHERE id = ?', [req.params.id]);
   res.json({ success: true });
 });
 
@@ -503,20 +500,20 @@ app.delete('/api/payroll/:id', auth(['admin']), async (req, res) => {
 // NOTICES
 // ============================================================
 app.get('/api/notices', auth(), async (req, res) => {
-  const { rows } = await pool.query('SELECT * FROM notices ORDER BY created_at DESC');
+  const [rows] = await pool.execute('SELECT * FROM notices ORDER BY created_at DESC');
   res.json(rows);
 });
 
 app.post('/api/notices', auth(['admin']), async (req, res) => {
-  await pool.query(
-    'INSERT INTO notices (title, content, priority, valid_from, valid_until, created_by) VALUES ($1, $2, $3, $4, $5, $6)',
+  await pool.execute(
+    'INSERT INTO notices (title, content, priority, valid_from, valid_until, created_by) VALUES (?, ?, ?, ?, ?, ?)',
     [req.body.title, req.body.content, req.body.priority || 'normal', req.body.validFrom, req.body.validUntil, req.user.id]
   );
   res.json({ success: true });
 });
 
 app.delete('/api/notices/:id', auth(['admin']), async (req, res) => {
-  await pool.query('DELETE FROM notices WHERE id = $1', [req.params.id]);
+  await pool.execute('DELETE FROM notices WHERE id = ?', [req.params.id]);
   res.json({ success: true });
 });
 
@@ -528,26 +525,26 @@ app.get('/api/regularizations', auth(), async (req, res) => {
   let params = [];
   
   if (req.user.role === 'employee') {
-    sql += ' AND employee_id = $1';
+    sql += ' AND employee_id = ?';
     params.push(req.user.id);
   }
   sql += ' ORDER BY created_at DESC';
   
-  const { rows } = await pool.query(sql, params);
+  const [rows] = await pool.execute(sql, params);
   res.json(rows);
 });
 
 app.post('/api/regularizations', auth(['employee']), async (req, res) => {
-  await pool.query(
-    'INSERT INTO regularizations (employee_id, date, check_in, check_out, reason, status) VALUES ($1, $2, $3, $4, $5, $6)',
+  await pool.execute(
+    'INSERT INTO regularizations (employee_id, date, check_in, check_out, reason, status) VALUES (?, ?, ?, ?, ?, ?)',
     [req.user.id, req.body.date, req.body.checkIn, req.body.checkOut, req.body.reason, 'pending']
   );
   res.json({ success: true });
 });
 
 app.put('/api/regularizations/:id/decision', auth(['admin']), async (req, res) => {
-  await pool.query(
-    'UPDATE regularizations SET status = $1, approved_by = $2, approved_at = CURRENT_TIMESTAMP WHERE id = $3',
+  await pool.execute(
+    'UPDATE regularizations SET status = ?, approved_by = ?, approved_at = CURRENT_TIMESTAMP WHERE id = ?',
     [req.body.decision, req.user.id, req.params.id]
   );
   res.json({ success: true });
@@ -565,7 +562,7 @@ app.get('*', (req, res) => {
 // ============================================================
 (async () => {
   try {
-    await pool.query('SELECT 1');
+    await pool.execute('SELECT 1');
     console.log('✓ Database connected');
     app.listen(PORT, () => {
       console.log(`\n🚀 Editone HRMS Server Running\n`);
