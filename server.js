@@ -1,10 +1,10 @@
 // ============================================================
-// EDITONE HRMS — Backend Server
-// Express + MySQL + JWT
+// EDITONE HRMS — Backend Server (PostgreSQL Version)
+// Express + PostgreSQL + JWT
 // ============================================================
 require('dotenv').config();
 const express = require('express');
-const mysql = require('mysql2/promise');
+const pg = require('pg');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
@@ -21,15 +21,15 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Database pool
-const pool = mysql.createPool({
+const pool = new pg.Pool({
   host: process.env.DB_HOST || 'localhost',
-  port: process.env.DB_PORT || 3306,
-  user: process.env.DB_USER || 'root',
+  port: process.env.DB_PORT || 5432,
+  user: process.env.DB_USER || 'postgres',
   password: process.env.DB_PASSWORD || '',
   database: process.env.DB_NAME || 'editone_hrms',
-  waitForConnections: true,
-  connectionLimit: 10,
-  decimalNumbers: true,
+  max: 10,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 2000,
 });
 
 // Helpers
@@ -60,7 +60,7 @@ function auth(allowedRoles = ['admin', 'employee']) {
 app.post('/api/auth/admin-login', async (req, res) => {
   try {
     const { username, password } = req.body;
-    const [rows] = await pool.execute('SELECT * FROM admin WHERE username = ?', [username]);
+    const { rows } = await pool.query('SELECT * FROM admin WHERE username = $1', [username]);
     if (rows.length === 0) return res.status(401).json({ error: 'Invalid credentials' });
     const admin = rows[0];
     const ok = await bcrypt.compare(password, admin.password_hash);
@@ -73,7 +73,7 @@ app.post('/api/auth/admin-login', async (req, res) => {
 app.post('/api/auth/employee-login', async (req, res) => {
   try {
     const { email, password } = req.body;
-    const [rows] = await pool.execute('SELECT * FROM employees WHERE email = ?', [email.toLowerCase()]);
+    const { rows } = await pool.query('SELECT * FROM employees WHERE email = $1', [email.toLowerCase()]);
     if (rows.length === 0) return res.status(401).json({ error: 'Invalid credentials' });
     const emp = rows[0];
     const ok = await bcrypt.compare(password, emp.password_hash);
@@ -86,10 +86,10 @@ app.post('/api/auth/employee-login', async (req, res) => {
 app.get('/api/auth/me', auth(), async (req, res) => {
   try {
     if (req.user.role === 'admin') {
-      const [rows] = await pool.execute('SELECT id, username, name, email FROM admin WHERE id = ?', [req.user.id]);
+      const { rows } = await pool.query('SELECT id, username, name, email FROM admin WHERE id = $1', [req.user.id]);
       return res.json({ ...rows[0], role: 'admin' });
     } else {
-      const [rows] = await pool.execute('SELECT * FROM employees WHERE id = ?', [req.user.id]);
+      const { rows } = await pool.query('SELECT * FROM employees WHERE id = $1', [req.user.id]);
       return res.json(empToJSON(rows[0]));
     }
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -99,7 +99,7 @@ app.get('/api/auth/me', auth(), async (req, res) => {
 // CONFIG
 // ============================================================
 app.get('/api/config', auth(), async (req, res) => {
-  const [rows] = await pool.execute('SELECT * FROM config WHERE id = 1');
+  const { rows } = await pool.query('SELECT * FROM config WHERE id = $1', [1]);
   const c = rows[0] || {};
   res.json({
     officeIn: c.office_in?.substring(0,5) || '09:00',
@@ -118,11 +118,11 @@ app.get('/api/config', auth(), async (req, res) => {
 app.put('/api/config', auth(['admin']), async (req, res) => {
   try {
     const c = req.body;
-    await pool.execute(
-      `UPDATE config SET office_in=?, office_out=?, overtime_cap=?, grace_period=?, working_days=?, ot_rate=?,
-        office_name=?, office_lat=?, office_lng=?, max_distance=? WHERE id=1`,
+    await pool.query(
+      `UPDATE config SET office_in=$1, office_out=$2, overtime_cap=$3, grace_period=$4, working_days=$5, ot_rate=$6,
+        office_name=$7, office_lat=$8, office_lng=$9, max_distance=$10 WHERE id=$11`,
       [c.officeIn, c.officeOut, c.overtimeCap, c.gracePeriod, c.workingDays, c.otRate,
-       c.officeName, c.officeLat, c.officeLng, c.maxDistance]
+       c.officeName, c.officeLat, c.officeLng, c.maxDistance, 1]
     );
     res.json({ success: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -130,7 +130,7 @@ app.put('/api/config', auth(['admin']), async (req, res) => {
 
 // Leave Types
 app.get('/api/leave-types', auth(), async (req, res) => {
-  const [rows] = await pool.execute('SELECT * FROM leave_types ORDER BY sort_order');
+  const { rows } = await pool.query('SELECT * FROM leave_types ORDER BY sort_order');
   res.json(rows.map(r => ({ id: r.id, name: r.name, annual: r.annual_quota, color: r.color, paid: !!r.is_paid })));
 });
 
@@ -138,64 +138,55 @@ app.get('/api/leave-types', auth(), async (req, res) => {
 // DEPARTMENTS
 // ============================================================
 app.get('/api/departments', auth(), async (req, res) => {
-  const [rows] = await pool.execute('SELECT * FROM departments ORDER BY name');
+  const { rows } = await pool.query('SELECT * FROM departments ORDER BY name');
   res.json(rows);
 });
 
 app.post('/api/departments', auth(['admin']), async (req, res) => {
   try {
     const id = uid();
-    await pool.execute('INSERT INTO departments (id, name, head) VALUES (?, ?, ?)', [id, req.body.name, req.body.head || '']);
+    await pool.query('INSERT INTO departments (id, name) VALUES ($1, $2)', [id, req.body.name]);
     res.json({ id, ...req.body });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.put('/api/departments/:id', auth(['admin']), async (req, res) => {
   try {
-    await pool.execute('UPDATE departments SET name=?, head=? WHERE id=?', [req.body.name, req.body.head || '', req.params.id]);
+    await pool.query('UPDATE departments SET name=$1 WHERE id=$2', [req.body.name, req.params.id]);
     res.json({ success: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.delete('/api/departments/:id', auth(['admin']), async (req, res) => {
-  await pool.execute('DELETE FROM departments WHERE id=?', [req.params.id]);
+  await pool.query('DELETE FROM departments WHERE id=$1', [req.params.id]);
   res.json({ success: true });
 });
 
 // ============================================================
 // EMPLOYEES
 // ============================================================
-function empToJSON(r) {
-  if (!r) return null;
+function empToJSON(emp) {
   return {
-    id: r.id,
-    employeeCode: r.employee_code,
-    name: r.name,
-    email: r.email,
-    phone: r.phone,
-    department: r.department,
-    designation: r.designation,
-    joinDate: r.join_date ? new Date(r.join_date).toISOString().split('T')[0] : null,
-    dob: r.dob ? new Date(r.dob).toISOString().split('T')[0] : null,
-    gender: r.gender,
-    address: r.address,
-    emergency: { name: r.emergency_name, phone: r.emergency_phone, relation: r.emergency_relation },
-    salary: { basic: parseFloat(r.basic), hra: parseFloat(r.hra), allowances: parseFloat(r.allowances), total: parseFloat(r.basic) + parseFloat(r.hra) + parseFloat(r.allowances) },
-    leaveBalance: typeof r.leave_balance === 'string' ? JSON.parse(r.leave_balance) : (r.leave_balance || {}),
-    status: r.status,
-    role: 'employee',
+    id: emp.id,
+    name: emp.name,
+    email: emp.email,
+    phone: emp.phone,
+    department: emp.department,
+    designation: emp.designation,
+    ctc: parseFloat(emp.ctc) || 0,
+    doj: emp.doj,
+    isActive: !!emp.is_active,
   };
 }
 
 app.get('/api/employees', auth(['admin']), async (req, res) => {
-  const [rows] = await pool.execute('SELECT * FROM employees ORDER BY name');
+  const { rows } = await pool.query('SELECT * FROM employees ORDER BY name');
   res.json(rows.map(empToJSON));
 });
 
 app.get('/api/employees/:id', auth(), async (req, res) => {
-  // Employees can only fetch themselves; admins can fetch anyone
   if (req.user.role === 'employee' && req.user.id !== req.params.id) return res.status(403).json({ error: 'Forbidden' });
-  const [rows] = await pool.execute('SELECT * FROM employees WHERE id=?', [req.params.id]);
+  const { rows } = await pool.query('SELECT * FROM employees WHERE id=$1', [req.params.id]);
   if (rows.length === 0) return res.status(404).json({ error: 'Not found' });
   res.json(empToJSON(rows[0]));
 });
@@ -205,191 +196,166 @@ app.post('/api/employees', auth(['admin']), async (req, res) => {
     const e = req.body;
     const id = uid();
     const pwHash = await bcrypt.hash(e.password || 'changeme123', 10);
-    const leaveBalance = JSON.stringify(e.leaveBalance || { casual: 12, sick: 12, earned: 15, lop: 0 });
-    await pool.execute(
-      `INSERT INTO employees (id, employee_code, name, email, password_hash, phone, department, designation,
-       join_date, dob, gender, address, emergency_name, emergency_phone, emergency_relation,
-       basic, hra, allowances, leave_balance, status) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, e.employeeCode || '', e.name, e.email.toLowerCase(), pwHash, e.phone || '',
-       e.department || '', e.designation || '', e.joinDate || null, e.dob || null, e.gender || '',
-       e.address || '', e.emergency?.name || '', e.emergency?.phone || '', e.emergency?.relation || '',
-       e.salary?.basic || 0, e.salary?.hra || 0, e.salary?.allowances || 0,
-       leaveBalance, 'active']
+    await pool.query(
+      `INSERT INTO employees (id, name, email, phone, department, designation, ctc, doj, password_hash, is_active)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+      [id, e.name, e.email.toLowerCase(), e.phone, e.department, e.designation, e.ctc, e.doj, pwHash, true]
     );
-    res.json({ id, success: true });
-  } catch (e) {
-    if (e.code === 'ER_DUP_ENTRY') return res.status(400).json({ error: 'Email already exists' });
-    res.status(500).json({ error: e.message });
-  }
+    res.json({ id, ...e });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.put('/api/employees/:id', auth(), async (req, res) => {
   try {
-    // Employees can edit their own profile (limited); admins can edit anyone
-    const isAdmin = req.user.role === 'admin';
-    if (!isAdmin && req.user.id !== req.params.id) return res.status(403).json({ error: 'Forbidden' });
     const e = req.body;
-    
-    if (isAdmin) {
-      // Full update
-      const fields = ['employee_code = ?', 'name = ?', 'email = ?', 'phone = ?', 'department = ?', 'designation = ?',
-        'join_date = ?', 'dob = ?', 'gender = ?', 'address = ?',
-        'emergency_name = ?', 'emergency_phone = ?', 'emergency_relation = ?',
-        'basic = ?', 'hra = ?', 'allowances = ?', 'status = ?'];
-      const params = [e.employeeCode || '', e.name, e.email.toLowerCase(), e.phone || '', e.department || '',
-        e.designation || '', e.joinDate || null, e.dob || null, e.gender || '', e.address || '',
-        e.emergency?.name || '', e.emergency?.phone || '', e.emergency?.relation || '',
-        e.salary?.basic || 0, e.salary?.hra || 0, e.salary?.allowances || 0, e.status || 'active'];
+    if (req.user.role === 'admin') {
+      const fields = [];
+      const params = [];
+      
+      if (e.name !== undefined) { fields.push('name = $' + (fields.length + 1)); params.push(e.name); }
+      if (e.phone !== undefined) { fields.push('phone = $' + (fields.length + 1)); params.push(e.phone); }
+      if (e.department !== undefined) { fields.push('department = $' + (fields.length + 1)); params.push(e.department); }
+      if (e.designation !== undefined) { fields.push('designation = $' + (fields.length + 1)); params.push(e.designation); }
+      if (e.ctc !== undefined) { fields.push('ctc = $' + (fields.length + 1)); params.push(e.ctc); }
+      if (e.doj !== undefined) { fields.push('doj = $' + (fields.length + 1)); params.push(e.doj); }
+      if (e.is_active !== undefined) { fields.push('is_active = $' + (fields.length + 1)); params.push(e.is_active); }
       if (e.password) {
-        fields.push('password_hash = ?');
+        fields.push('password_hash = $' + (fields.length + 1));
         params.push(await bcrypt.hash(e.password, 10));
       }
-      if (e.leaveBalance) {
-        fields.push('leave_balance = ?');
-        params.push(JSON.stringify(e.leaveBalance));
-      }
+      
       params.push(req.params.id);
-      await pool.execute(`UPDATE employees SET ${fields.join(', ')} WHERE id = ?`, params);
+      await pool.query(`UPDATE employees SET ${fields.join(', ')} WHERE id = $${fields.length + 1}`, params);
     } else {
       // Employee self-edit (limited fields)
-      const fields = ['phone = ?', 'address = ?', 'emergency_name = ?', 'emergency_phone = ?', 'emergency_relation = ?'];
-      const params = [e.phone || '', e.address || '', e.emergency?.name || '', e.emergency?.phone || '', e.emergency?.relation || ''];
+      const fields = [];
+      const params = [];
+      
+      if (e.phone !== undefined) { fields.push('phone = $' + (fields.length + 1)); params.push(e.phone); }
       if (e.password) {
-        fields.push('password_hash = ?');
+        fields.push('password_hash = $' + (fields.length + 1));
         params.push(await bcrypt.hash(e.password, 10));
       }
+      
       params.push(req.params.id);
-      await pool.execute(`UPDATE employees SET ${fields.join(', ')} WHERE id = ?`, params);
+      await pool.query(`UPDATE employees SET ${fields.join(', ')} WHERE id = $${fields.length + 1}`, params);
     }
     res.json({ success: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.delete('/api/employees/:id', auth(['admin']), async (req, res) => {
-  await pool.execute('DELETE FROM employees WHERE id=?', [req.params.id]);
+  await pool.query('DELETE FROM employees WHERE id=$1', [req.params.id]);
   res.json({ success: true });
 });
 
 // ============================================================
-// QR CODE
+// QR CODES
 // ============================================================
 app.get('/api/qr/today', auth(), async (req, res) => {
   const t = todayStr();
-  let [rows] = await pool.execute('SELECT * FROM qr_codes WHERE date = ?', [t]);
+  let { rows } = await pool.query('SELECT * FROM qr_codes WHERE qr_date = $1', [t]);
   if (rows.length === 0) {
     const code = 'EDITONE-' + t + '-' + uid().toUpperCase();
-    await pool.execute('INSERT INTO qr_codes (date, code) VALUES (?, ?)', [t, code]);
+    await pool.query('INSERT INTO qr_codes (id, qr_date, qr_secret) VALUES ($1, $2, $3)', [uid(), t, code]);
     return res.json({ date: t, code });
   }
-  res.json({ date: rows[0].date.toISOString().split('T')[0], code: rows[0].code });
+  res.json({ date: rows[0].qr_date.toISOString().split('T')[0], code: rows[0].qr_secret });
 });
 
 app.post('/api/qr/refresh', auth(['admin']), async (req, res) => {
   const t = todayStr();
   const code = 'EDITONE-' + t + '-' + uid().toUpperCase();
-  await pool.execute('REPLACE INTO qr_codes (date, code) VALUES (?, ?)', [t, code]);
+  await pool.query('INSERT INTO qr_codes (id, qr_date, qr_secret) VALUES ($1, $2, $3) ON CONFLICT (qr_date) DO UPDATE SET qr_secret = $3', [uid(), t, code]);
   res.json({ date: t, code });
 });
 
 // ============================================================
 // ATTENDANCE
 // ============================================================
-function attToJSON(r) {
+function attToJSON(a) {
   return {
-    id: r.id,
-    employeeId: r.employee_id,
-    date: new Date(r.date).toISOString().split('T')[0],
-    checkIn: r.check_in?.substring(0,5) || null,
-    checkOut: r.check_out?.substring(0,5) || null,
-    inStatus: r.in_status,
-    outStatus: r.out_status,
-    lateMinutes: r.late_minutes || 0,
-    overtimeMinutes: r.overtime_minutes || 0,
-    earlyOutMinutes: r.early_out_minutes || 0,
-    workedMinutes: r.worked_minutes || 0,
-    location: typeof r.check_in_location === 'string' ? JSON.parse(r.check_in_location) : r.check_in_location,
-    checkOutLocation: typeof r.check_out_location === 'string' ? JSON.parse(r.check_out_location) : r.check_out_location,
-    qrCode: r.qr_code,
-    mode: r.mode,
-    manualBy: r.manual_by,
-    manualReason: r.manual_reason,
+    id: a.id,
+    employeeId: a.employee_id,
+    date: a.date,
+    checkIn: a.check_in?.substring(0,5) || '',
+    checkOut: a.check_out?.substring(0,5) || '',
+    locationLat: parseFloat(a.location_lat) || null,
+    locationLng: parseFloat(a.location_lng) || null,
+    locationAccuracy: a.location_accuracy || null,
+    qrId: a.qr_id,
+    lateBy: a.late_by || null,
+    earlyBy: a.early_by || null,
+    overtime: a.overtime || null,
+    status: a.status,
   };
 }
 
 app.get('/api/attendance', auth(), async (req, res) => {
   let sql = 'SELECT * FROM attendance WHERE 1=1';
-  const params = [];
-  if (req.user.role === 'employee') { sql += ' AND employee_id = ?'; params.push(req.user.id); }
-  else if (req.query.employeeId) { sql += ' AND employee_id = ?'; params.push(req.query.employeeId); }
-  if (req.query.from) { sql += ' AND date >= ?'; params.push(req.query.from); }
-  if (req.query.to) { sql += ' AND date <= ?'; params.push(req.query.to); }
+  let params = [];
+  
+  if (req.user.role === 'employee') {
+    sql += ' AND employee_id = $1';
+    params.push(req.user.id);
+  }
+  if (req.query.employeeId) {
+    sql += ' AND employee_id = $' + (params.length + 1);
+    params.push(req.query.employeeId);
+  }
+  if (req.query.from) { 
+    sql += ' AND date >= $' + (params.length + 1); 
+    params.push(req.query.from); 
+  }
+  if (req.query.to) { 
+    sql += ' AND date <= $' + (params.length + 1); 
+    params.push(req.query.to); 
+  }
   sql += ' ORDER BY date DESC';
-  const [rows] = await pool.execute(sql, params);
+  
+  const { rows } = await pool.query(sql, params);
   res.json(rows.map(attToJSON));
 });
 
-function computeAtt(checkIn, checkOut, cfg) {
-  const tm = t => { if (!t) return 0; const [h,m] = t.split(':').map(Number); return h*60+(m||0); };
-  const oI = tm(cfg.officeIn), oO = tm(cfg.officeOut), cap = tm(cfg.overtimeCap);
-  const iM = checkIn?tm(checkIn):0, oM = checkOut?tm(checkOut):0;
-  const r = { lateMinutes:0, earlyOutMinutes:0, overtimeMinutes:0, workedMinutes:0, inStatus:'on-time', outStatus:'pending' };
-  if (checkIn) {
-    if (iM > oI + cfg.gracePeriod) { r.lateMinutes = iM - oI; r.inStatus='late'; }
-    else if (iM < oI) r.inStatus='early';
-  }
-  if (checkOut) {
-    r.workedMinutes = Math.max(0, Math.min(oM, cap) - Math.max(iM, 0));
-    if (oM < oO) { r.earlyOutMinutes = oO - oM; r.outStatus='early-out'; }
-    else if (oM > oO) { r.overtimeMinutes = Math.min(oM, cap) - oO; r.outStatus='overtime'; }
-    else r.outStatus='on-time';
-  }
-  return r;
-}
-
-// Employee scans QR
 app.post('/api/attendance/scan', auth(['employee']), async (req, res) => {
   try {
     const { qrCode, location } = req.body;
     const t = todayStr();
+    
     // Verify QR
-    const [qrRows] = await pool.execute('SELECT code FROM qr_codes WHERE date = ?', [t]);
-    if (qrRows.length === 0 || qrRows[0].code !== qrCode) return res.status(400).json({ error: 'Invalid or expired QR code' });
+    const { rows: qrRows } = await pool.query('SELECT qr_secret FROM qr_codes WHERE qr_date = $1', [t]);
+    if (qrRows.length === 0 || qrRows[0].qr_secret !== qrCode) {
+      return res.status(400).json({ error: 'Invalid or expired QR code' });
+    }
     
     // Get config
-    const [cfgRows] = await pool.execute('SELECT * FROM config WHERE id = 1');
-    const cfg = {
-      officeIn: cfgRows[0].office_in.substring(0,5),
-      officeOut: cfgRows[0].office_out.substring(0,5),
-      overtimeCap: cfgRows[0].overtime_cap.substring(0,5),
-      gracePeriod: cfgRows[0].grace_period,
-    };
+    const { rows: cfgRows } = await pool.query('SELECT * FROM config WHERE id = $1', [1]);
+    const cfg = cfgRows[0] || {};
     
     const now = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false });
     
     // Check existing
-    const [existing] = await pool.execute('SELECT * FROM attendance WHERE employee_id = ? AND date = ?', [req.user.id, t]);
+    const { rows: existing } = await pool.query('SELECT * FROM attendance WHERE employee_id = $1 AND date = $2', [req.user.id, t]);
     
     if (existing.length === 0) {
       // Check-in
-      const calc = computeAtt(now, null, cfg);
-      const id = uid();
-      await pool.execute(
-        `INSERT INTO attendance (id, employee_id, date, check_in, in_status, late_minutes, check_in_location, qr_code, mode)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [id, req.user.id, t, now + ':00', calc.inStatus, calc.lateMinutes, JSON.stringify(location || {}), qrCode, 'office']
+      const lateBy = now > cfg.office_in ? Math.floor((new Date('2023-01-01 ' + now) - new Date('2023-01-01 ' + cfg.office_in)) / 60000) : 0;
+      await pool.query(
+        `INSERT INTO attendance (employee_id, date, check_in, location_lat, location_lng, location_accuracy, qr_id, late_by, status)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+        [req.user.id, t, now, location?.lat, location?.lng, location?.accuracy, qrCode, lateBy, 'present']
       );
-      res.json({ action: 'check-in', time: now, ...calc });
-    } else if (!existing[0].check_out) {
-      // Check-out
-      const calc = computeAtt(existing[0].check_in.substring(0,5), now, cfg);
-      await pool.execute(
-        `UPDATE attendance SET check_out=?, out_status=?, overtime_minutes=?, early_out_minutes=?, worked_minutes=?, check_out_location=? WHERE id=?`,
-        [now + ':00', calc.outStatus, calc.overtimeMinutes, calc.earlyOutMinutes, calc.workedMinutes, JSON.stringify(location || {}), existing[0].id]
-      );
-      res.json({ action: 'check-out', time: now, ...calc });
+      res.json({ action: 'check-in', time: now, lateBy });
     } else {
-      res.status(400).json({ error: 'Already checked in and out today' });
+      // Check-out
+      const earlyBy = now < cfg.office_out ? Math.floor((new Date('2023-01-01 ' + cfg.office_out) - new Date('2023-01-01 ' + now)) / 60000) : 0;
+      const overtime = now > cfg.overtime_cap ? Math.floor((new Date('2023-01-01 ' + now) - new Date('2023-01-01 ' + cfg.overtime_cap)) / 60000) : 0;
+      await pool.query(
+        `UPDATE attendance SET check_out = $1, location_lat = $2, location_lng = $3, location_accuracy = $4, early_by = $5, overtime = $6
+         WHERE employee_id = $7 AND date = $8`,
+        [now, location?.lat, location?.lng, location?.accuracy, earlyBy, overtime, req.user.id, t]
+      );
+      res.json({ action: 'check-out', time: now, earlyBy, overtime });
     }
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -397,84 +363,136 @@ app.post('/api/attendance/scan', auth(['employee']), async (req, res) => {
 // ============================================================
 // LEAVES
 // ============================================================
-function leaveToJSON(r) {
-  return {
-    id: r.id,
-    employeeId: r.employee_id,
-    type: r.type,
-    fromDate: new Date(r.from_date).toISOString().split('T')[0],
-    toDate: new Date(r.to_date).toISOString().split('T')[0],
-    halfDay: !!r.half_day,
-    reason: r.reason,
-    status: r.status,
-    appliedAt: r.applied_at,
-    processedAt: r.processed_at,
-    processedBy: r.processed_by,
-  };
-}
-
 app.get('/api/leaves', auth(), async (req, res) => {
   let sql = 'SELECT * FROM leaves WHERE 1=1';
-  const params = [];
-  if (req.user.role === 'employee') { sql += ' AND employee_id = ?'; params.push(req.user.id); }
-  sql += ' ORDER BY applied_at DESC';
-  const [rows] = await pool.execute(sql, params);
-  res.json(rows.map(leaveToJSON));
+  let params = [];
+  
+  if (req.user.role === 'employee') {
+    sql += ' AND employee_id = $1';
+    params.push(req.user.id);
+  }
+  if (req.query.status) {
+    sql += ' AND status = $' + (params.length + 1);
+    params.push(req.query.status);
+  }
+  sql += ' ORDER BY created_at DESC';
+  
+  const { rows } = await pool.query(sql, params);
+  res.json(rows);
 });
 
 app.post('/api/leaves', auth(['employee']), async (req, res) => {
   try {
-    const id = uid();
-    await pool.execute(
-      `INSERT INTO leaves (id, employee_id, type, from_date, to_date, half_day, reason, status) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')`,
-      [id, req.user.id, req.body.type, req.body.fromDate, req.body.toDate, req.body.halfDay ? 1 : 0, req.body.reason]
+    const l = req.body;
+    const days = Math.ceil((new Date(l.end) - new Date(l.start)) / (1000*60*60*24)) + 1;
+    await pool.query(
+      `INSERT INTO leaves (employee_id, leave_type, start_date, end_date, days, reason, status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [req.user.id, l.type, l.start, l.end, days, l.reason, 'pending']
     );
-    res.json({ id, success: true });
+    res.json({ success: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.put('/api/leaves/:id/decision', auth(['admin']), async (req, res) => {
-  try {
-    const { status } = req.body; // 'approved' or 'rejected'
-    const [rows] = await pool.execute('SELECT * FROM leaves WHERE id = ?', [req.params.id]);
-    if (rows.length === 0) return res.status(404).json({ error: 'Not found' });
-    const lv = rows[0];
-    
-    await pool.execute('UPDATE leaves SET status=?, processed_at=NOW(), processed_by=? WHERE id=?', [status, req.user.name, req.params.id]);
-    
-    // Deduct leave balance if approved & paid
-    if (status === 'approved') {
-      const [ltRows] = await pool.execute('SELECT * FROM leave_types WHERE id = ?', [lv.type]);
-      if (ltRows.length > 0 && ltRows[0].is_paid) {
-        const [empRows] = await pool.execute('SELECT leave_balance FROM employees WHERE id = ?', [lv.employee_id]);
-        let lb = typeof empRows[0].leave_balance === 'string' ? JSON.parse(empRows[0].leave_balance) : empRows[0].leave_balance;
-        const days = (Math.floor((new Date(lv.to_date) - new Date(lv.from_date))/86400000) + 1) * (lv.half_day ? 0.5 : 1);
-        lb[lv.type] = Math.max(0, (lb[lv.type] || 0) - days);
-        await pool.execute('UPDATE employees SET leave_balance = ? WHERE id = ?', [JSON.stringify(lb), lv.employee_id]);
-      }
-    }
-    res.json({ success: true });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  await pool.query(
+    'UPDATE leaves SET status = $1, approved_by = $2, approved_at = CURRENT_TIMESTAMP WHERE id = $3',
+    [req.body.decision, req.user.id, req.params.id]
+  );
+  res.json({ success: true });
 });
 
 // ============================================================
 // HOLIDAYS
 // ============================================================
 app.get('/api/holidays', auth(), async (req, res) => {
-  const [rows] = await pool.execute('SELECT * FROM holidays ORDER BY date');
-  res.json(rows.map(r => ({ id: r.id, date: new Date(r.date).toISOString().split('T')[0], name: r.name, type: r.type })));
+  const { rows } = await pool.query('SELECT * FROM holidays ORDER BY date');
+  res.json(rows);
 });
 
 app.post('/api/holidays', auth(['admin']), async (req, res) => {
-  try {
-    const id = uid();
-    await pool.execute('INSERT INTO holidays (id, date, name, type) VALUES (?, ?, ?, ?)', [id, req.body.date, req.body.name, req.body.type || 'national']);
-    res.json({ id, success: true });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  await pool.query('INSERT INTO holidays (name, date, type) VALUES ($1, $2, $3)', [req.body.name, req.body.date, req.body.type || 'national']);
+  res.json({ success: true });
 });
 
 app.delete('/api/holidays/:id', auth(['admin']), async (req, res) => {
-  await pool.execute('DELETE FROM holidays WHERE id=?', [req.params.id]);
+  await pool.query('DELETE FROM holidays WHERE id = $1', [req.params.id]);
+  res.json({ success: true });
+});
+
+// ============================================================
+// PAYROLL
+// ============================================================
+app.get('/api/payroll', auth(), async (req, res) => {
+  let sql = 'SELECT * FROM payroll WHERE 1=1';
+  let params = [];
+  
+  if (req.user.role === 'employee') {
+    sql += ' AND employee_id = $1';
+    params.push(req.user.id);
+  }
+  if (req.query.employeeId) {
+    sql += ' AND employee_id = $' + (params.length + 1);
+    params.push(req.query.employeeId);
+  }
+  if (req.query.month) {
+    sql += ' AND month = $' + (params.length + 1);
+    params.push(req.query.month);
+  }
+  if (req.query.year) {
+    sql += ' AND year = $' + (params.length + 1);
+    params.push(req.query.year);
+  }
+  sql += ' ORDER BY year DESC, month DESC';
+  
+  const { rows } = await pool.query(sql, params);
+  res.json(rows);
+});
+
+app.post('/api/payroll/process', auth(['admin']), async (req, res) => {
+  try {
+    const { employeeId, month, year } = req.body;
+    const emp = await pool.query('SELECT * FROM employees WHERE id = $1', [employeeId]);
+    
+    if (emp.rows.length === 0) return res.status(404).json({ error: 'Employee not found' });
+    
+    const e = emp.rows[0];
+    const basic = parseFloat(e.ctc) * 0.4;
+    const hra = basic * 0.4;
+    const conveyance = 1600;
+    const medical = 1250;
+    const special = parseFloat(e.ctc) - basic - hra - conveyance - medical;
+    const gross = basic + hra + conveyance + medical + special;
+    
+    const pf = basic * 0.12;
+    const esi = Math.min(gross * 0.0075, 7500);
+    const pt = 200;
+    const tds = 0;
+    const total = pf + esi + pt + tds;
+    const net = gross - total;
+    
+    await pool.query(
+      `INSERT INTO payroll (employee_id, month, year, basic_salary, hra, conveyance, medical, special_allowance, 
+       gross_salary, pf_deduction, esi_deduction, professional_tax, tds, other_deductions, total_deductions, net_salary, status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+       ON CONFLICT (employee_id, month, year) DO UPDATE SET
+       basic_salary = $4, hra = $5, conveyance = $6, medical = $7, special_allowance = $8,
+       gross_salary = $9, pf_deduction = $10, esi_deduction = $11, professional_tax = $12, tds = $13,
+       other_deductions = $14, total_deductions = $15, net_salary = $16, status = $17`,
+      [employeeId, month, year, basic, hra, conveyance, medical, special, gross, pf, esi, pt, tds, 0, total, net, 'draft']
+    );
+    
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.put('/api/payroll/:id/pay', auth(['admin']), async (req, res) => {
+  await pool.query('UPDATE payroll SET status = $1, paid_at = CURRENT_TIMESTAMP WHERE id = $2', ['paid', req.params.id]);
+  res.json({ success: true });
+});
+
+app.delete('/api/payroll/:id', auth(['admin']), async (req, res) => {
+  await pool.query('DELETE FROM payroll WHERE id = $1', [req.params.id]);
   res.json({ success: true });
 });
 
@@ -482,33 +500,20 @@ app.delete('/api/holidays/:id', auth(['admin']), async (req, res) => {
 // NOTICES
 // ============================================================
 app.get('/api/notices', auth(), async (req, res) => {
-  let sql = 'SELECT * FROM notices';
-  const params = [];
-  if (req.user.role === 'employee') {
-    sql += ' WHERE for_employee_id IS NULL OR for_employee_id = ?';
-    params.push(req.user.id);
-  }
-  sql += ' ORDER BY posted_at DESC';
-  const [rows] = await pool.execute(sql, params);
-  res.json(rows.map(r => ({
-    id: r.id, title: r.title, body: r.body, priority: r.priority,
-    forEmployeeId: r.for_employee_id, postedBy: r.posted_by, postedAt: r.posted_at
-  })));
+  const { rows } = await pool.query('SELECT * FROM notices ORDER BY created_at DESC');
+  res.json(rows);
 });
 
 app.post('/api/notices', auth(['admin']), async (req, res) => {
-  try {
-    const id = uid();
-    await pool.execute(
-      'INSERT INTO notices (id, title, body, priority, for_employee_id, posted_by) VALUES (?, ?, ?, ?, ?, ?)',
-      [id, req.body.title, req.body.body, req.body.priority || 'normal', req.body.forEmployeeId || null, req.user.name]
-    );
-    res.json({ id, success: true });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  await pool.query(
+    'INSERT INTO notices (title, content, priority, valid_from, valid_until, created_by) VALUES ($1, $2, $3, $4, $5, $6)',
+    [req.body.title, req.body.content, req.body.priority || 'normal', req.body.validFrom, req.body.validUntil, req.user.id]
+  );
+  res.json({ success: true });
 });
 
 app.delete('/api/notices/:id', auth(['admin']), async (req, res) => {
-  await pool.execute('DELETE FROM notices WHERE id=?', [req.params.id]);
+  await pool.query('DELETE FROM notices WHERE id = $1', [req.params.id]);
   res.json({ success: true });
 });
 
@@ -517,216 +522,36 @@ app.delete('/api/notices/:id', auth(['admin']), async (req, res) => {
 // ============================================================
 app.get('/api/regularizations', auth(), async (req, res) => {
   let sql = 'SELECT * FROM regularizations WHERE 1=1';
-  const params = [];
-  if (req.user.role === 'employee') { sql += ' AND employee_id = ?'; params.push(req.user.id); }
-  sql += ' ORDER BY applied_at DESC';
-  const [rows] = await pool.execute(sql, params);
-  res.json(rows.map(r => ({
-    id: r.id, employeeId: r.employee_id, date: new Date(r.date).toISOString().split('T')[0],
-    checkIn: r.check_in?.substring(0,5), checkOut: r.check_out?.substring(0,5),
-    reason: r.reason, status: r.status, appliedAt: r.applied_at, processedAt: r.processed_at, processedBy: r.processed_by
-  })));
+  let params = [];
+  
+  if (req.user.role === 'employee') {
+    sql += ' AND employee_id = $1';
+    params.push(req.user.id);
+  }
+  sql += ' ORDER BY created_at DESC';
+  
+  const { rows } = await pool.query(sql, params);
+  res.json(rows);
 });
 
 app.post('/api/regularizations', auth(['employee']), async (req, res) => {
-  try {
-    const id = uid();
-    await pool.execute(
-      'INSERT INTO regularizations (id, employee_id, date, check_in, check_out, reason, status) VALUES (?, ?, ?, ?, ?, ?, "pending")',
-      [id, req.user.id, req.body.date, req.body.checkIn || null, req.body.checkOut || null, req.body.reason]
-    );
-    res.json({ id, success: true });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  await pool.query(
+    'INSERT INTO regularizations (employee_id, date, check_in, check_out, reason, status) VALUES ($1, $2, $3, $4, $5, $6)',
+    [req.user.id, req.body.date, req.body.checkIn, req.body.checkOut, req.body.reason, 'pending']
+  );
+  res.json({ success: true });
 });
 
 app.put('/api/regularizations/:id/decision', auth(['admin']), async (req, res) => {
-  try {
-    const [rows] = await pool.execute('SELECT * FROM regularizations WHERE id = ?', [req.params.id]);
-    if (rows.length === 0) return res.status(404).json({ error: 'Not found' });
-    const r = rows[0];
-    await pool.execute('UPDATE regularizations SET status=?, processed_at=NOW(), processed_by=? WHERE id=?',
-      [req.body.status, req.user.name, req.params.id]);
-    
-    // If approved, create attendance entry
-    if (req.body.status === 'approved') {
-      const [cfgRows] = await pool.execute('SELECT * FROM config WHERE id = 1');
-      const cfg = {
-        officeIn: cfgRows[0].office_in.substring(0,5),
-        officeOut: cfgRows[0].office_out.substring(0,5),
-        overtimeCap: cfgRows[0].overtime_cap.substring(0,5),
-        gracePeriod: cfgRows[0].grace_period,
-      };
-      const inT = r.check_in?.substring(0,5), outT = r.check_out?.substring(0,5);
-      const calc = computeAtt(inT, outT, cfg);
-      const id = uid();
-      try {
-        await pool.execute(
-          `INSERT INTO attendance (id, employee_id, date, check_in, check_out, in_status, out_status,
-           late_minutes, overtime_minutes, early_out_minutes, worked_minutes,
-           check_in_location, mode, manual_by, manual_reason)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [id, r.employee_id, r.date, inT ? inT + ':00' : null, outT ? outT + ':00' : null,
-           calc.inStatus, calc.outStatus, calc.lateMinutes, calc.overtimeMinutes, calc.earlyOutMinutes, calc.workedMinutes,
-           JSON.stringify({label: 'Manually regularized', lat: 0, lng: 0}), 'manual', req.user.name, r.reason]
-        );
-      } catch (e) { /* may already exist */ }
-    }
-    res.json({ success: true });
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-// ============================================================
-// PAYROLL
-// ============================================================
-function payrollToJSON(r) {
-  return {
-    id: r.id, employeeId: r.employee_id, month: r.month, year: r.year,
-    workingDays: r.working_days, presentDays: r.present_days,
-    paidLeaveDays: parseFloat(r.paid_leave_days) || 0, lopDays: parseFloat(r.lop_days) || 0,
-    totalLateMin: r.total_late_min || 0, totalOTMin: r.total_ot_min || 0,
-    earnings: typeof r.earnings === 'string' ? JSON.parse(r.earnings) : r.earnings,
-    deductions: typeof r.deductions === 'string' ? JSON.parse(r.deductions) : r.deductions,
-    netSalary: parseFloat(r.net_salary) || 0,
-    status: r.status, processedAt: r.processed_at, processedBy: r.processed_by,
-    paidAt: r.paid_at ? new Date(r.paid_at).toISOString().split('T')[0] : null,
-    paymentMode: r.payment_mode, transactionId: r.transaction_id,
-    paymentRemarks: r.payment_remarks, paidBy: r.paid_by,
-  };
-}
-
-app.get('/api/payroll', auth(), async (req, res) => {
-  let sql = 'SELECT * FROM payroll WHERE 1=1';
-  const params = [];
-  if (req.user.role === 'employee') { sql += ' AND employee_id = ?'; params.push(req.user.id); }
-  else if (req.query.employeeId) { sql += ' AND employee_id = ?'; params.push(req.query.employeeId); }
-  if (req.query.month !== undefined) { sql += ' AND month = ?'; params.push(req.query.month); }
-  if (req.query.year !== undefined) { sql += ' AND year = ?'; params.push(req.query.year); }
-  sql += ' ORDER BY year DESC, month DESC';
-  const [rows] = await pool.execute(sql, params);
-  res.json(rows.map(payrollToJSON));
-});
-
-// Process payroll for an employee for a month
-app.post('/api/payroll/process', auth(['admin']), async (req, res) => {
-  try {
-    const { employeeId, month, year } = req.body;
-    
-    // Load employee, config, attendance, leaves, holidays
-    const [empRows] = await pool.execute('SELECT * FROM employees WHERE id = ?', [employeeId]);
-    if (empRows.length === 0) return res.status(404).json({ error: 'Employee not found' });
-    const emp = empRows[0];
-    
-    const [cfgRows] = await pool.execute('SELECT * FROM config WHERE id = 1');
-    const cfg = cfgRows[0];
-    
-    const monthStr = `${year}-${String(month+1).padStart(2,'0')}`;
-    const [attRows] = await pool.execute('SELECT * FROM attendance WHERE employee_id = ? AND date LIKE ?', [employeeId, monthStr + '%']);
-    const [lvRows] = await pool.execute('SELECT * FROM leaves WHERE employee_id = ? AND status = "approved" AND (from_date LIKE ? OR to_date LIKE ?)',
-      [employeeId, monthStr + '%', monthStr + '%']);
-    const [holRows] = await pool.execute('SELECT * FROM holidays WHERE date LIKE ?', [monthStr + '%']);
-    const [ltRows] = await pool.execute('SELECT * FROM leave_types');
-    
-    // Calculate working days
-    const daysInMonth = new Date(year, month+1, 0).getDate();
-    let workingDays = 0;
-    for (let d=1; d<=daysInMonth; d++) {
-      const dt = new Date(year, month, d);
-      const dow = dt.getDay();
-      const ds = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-      const isOff = cfg.working_days >= 6 ? (dow === 0) : (dow === 0 || dow === 6);
-      const isHoliday = holRows.some(h => h.date.toISOString().split('T')[0] === ds);
-      if (!isOff && !isHoliday) workingDays++;
-    }
-    
-    const salary = { basic: parseFloat(emp.basic), hra: parseFloat(emp.hra), allowances: parseFloat(emp.allowances) };
-    const totalSal = salary.basic + salary.hra + salary.allowances;
-    const perDay = workingDays > 0 ? totalSal / workingDays : 0;
-    const perHour = perDay / 8;
-    
-    const presentDays = attRows.length;
-    const totalLateMin = attRows.reduce((s,a) => s + (a.late_minutes||0), 0);
-    const totalOTMin = attRows.reduce((s,a) => s + (a.overtime_minutes||0), 0);
-    
-    let paidLeaveDays = 0, lopDays = 0;
-    lvRows.forEach(lv => {
-      const days = (Math.floor((new Date(lv.to_date) - new Date(lv.from_date))/86400000) + 1) * (lv.half_day ? 0.5 : 1);
-      const lt = ltRows.find(t => t.id === lv.type);
-      if (lt && lt.is_paid) paidLeaveDays += days; else lopDays += days;
-    });
-    
-    const lopDeduction = Math.round(perDay * lopDays);
-    const lateDeduction = totalLateMin > 60 ? Math.round((totalLateMin/60) * perHour * 0.5) : 0;
-    const otBonus = Math.round((totalOTMin/60) * perHour * (parseFloat(cfg.ot_rate) || 1.5));
-    const pf = Math.round(salary.basic * 0.12);
-    
-    const earnings = { ...salary, otBonus, total: totalSal + otBonus };
-    const deductions = { pf, lop: lopDeduction, late: lateDeduction, total: pf + lopDeduction + lateDeduction };
-    const netSalary = earnings.total - deductions.total;
-    
-    // Check if exists
-    const [existing] = await pool.execute('SELECT id, status, paid_at, payment_mode, transaction_id, payment_remarks, paid_by FROM payroll WHERE employee_id = ? AND month = ? AND year = ?', [employeeId, month, year]);
-    
-    if (existing.length > 0) {
-      // Update but preserve payment info
-      const e = existing[0];
-      await pool.execute(
-        `UPDATE payroll SET working_days=?, present_days=?, paid_leave_days=?, lop_days=?, total_late_min=?, total_ot_min=?,
-         earnings=?, deductions=?, net_salary=?, processed_at=NOW(), processed_by=? WHERE id=?`,
-        [workingDays, presentDays, paidLeaveDays, lopDays, totalLateMin, totalOTMin,
-         JSON.stringify(earnings), JSON.stringify(deductions), netSalary, req.user.name, e.id]
-      );
-      return res.json({ id: e.id, success: true, updated: true });
-    }
-    
-    const id = uid();
-    await pool.execute(
-      `INSERT INTO payroll (id, employee_id, month, year, working_days, present_days, paid_leave_days, lop_days,
-       total_late_min, total_ot_min, earnings, deductions, net_salary, status, processed_by)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)`,
-      [id, employeeId, month, year, workingDays, presentDays, paidLeaveDays, lopDays,
-       totalLateMin, totalOTMin, JSON.stringify(earnings), JSON.stringify(deductions), netSalary, req.user.name]
-    );
-    res.json({ id, success: true });
-  } catch (e) { console.error(e); res.status(500).json({ error: e.message }); }
-});
-
-// Mark payroll as paid
-app.put('/api/payroll/:id/pay', auth(['admin']), async (req, res) => {
-  try {
-    const { paidAt, paymentMode, transactionId, paymentRemarks } = req.body;
-    const [pRows] = await pool.execute('SELECT * FROM payroll WHERE id = ?', [req.params.id]);
-    if (pRows.length === 0) return res.status(404).json({ error: 'Not found' });
-    const p = pRows[0];
-    const [empRows] = await pool.execute('SELECT name FROM employees WHERE id = ?', [p.employee_id]);
-    
-    await pool.execute(
-      `UPDATE payroll SET status='paid', paid_at=?, payment_mode=?, transaction_id=?, payment_remarks=?, paid_by=? WHERE id=?`,
-      [paidAt, paymentMode, transactionId || null, paymentRemarks || null, req.user.name, req.params.id]
-    );
-    
-    // Auto-create notice for employee
-    const monthName = ['January','February','March','April','May','June','July','August','September','October','November','December'][p.month];
-    const inr = n => '₹' + parseFloat(n).toLocaleString('en-IN');
-    const noticeId = uid();
-    await pool.execute(
-      `INSERT INTO notices (id, title, body, priority, for_employee_id, posted_by) VALUES (?, ?, ?, 'medium', ?, ?)`,
-      [noticeId,
-       `💰 Salary Credited · ${monthName} ${p.year}`,
-       `Dear ${empRows[0].name},\n\nAap ki ${monthName} ${p.year} ki salary ${inr(p.net_salary)} ${paymentMode} ke through transfer ho gayi hai${transactionId?` (TXN: ${transactionId})`:''}.\n\nPayslip aap apne Payslips tab mein dekh sakte hain.${paymentRemarks?`\n\nNote: ${paymentRemarks}`:''}\n\n— HR, Editone International`,
-       p.employee_id, req.user.name]
-    );
-    
-    res.json({ success: true });
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-app.delete('/api/payroll/:id', auth(['admin']), async (req, res) => {
-  await pool.execute('DELETE FROM payroll WHERE id=?', [req.params.id]);
+  await pool.query(
+    'UPDATE regularizations SET status = $1, approved_by = $2, approved_at = CURRENT_TIMESTAMP WHERE id = $3',
+    [req.body.decision, req.user.id, req.params.id]
+  );
   res.json({ success: true });
 });
 
 // ============================================================
-// SERVE FRONTEND
+// FALLBACK
 // ============================================================
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
@@ -737,7 +562,7 @@ app.get('*', (req, res) => {
 // ============================================================
 (async () => {
   try {
-    await pool.execute('SELECT 1');
+    await pool.query('SELECT 1');
     console.log('✓ Database connected');
     app.listen(PORT, () => {
       console.log(`\n🚀 Editone HRMS Server Running\n`);

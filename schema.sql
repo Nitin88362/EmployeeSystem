@@ -1,16 +1,16 @@
 -- ============================================================
--- EDITONE HRMS DATABASE SCHEMA
+-- EDITONE HRMS DATABASE SCHEMA - PostgreSQL Version
 -- Naraina Industrial Area, New Delhi · Est. 1999
--- Run: mysql -u root -p < schema.sql
+-- Run: psql -U postgres -d postgres -f schema_postgresql.sql
 -- ============================================================
 
 DROP DATABASE IF EXISTS editone_hrms;
-CREATE DATABASE editone_hrms CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE editone_hrms;
+CREATE DATABASE editone_hrms;
+\c editone_hrms;
 
 -- Admin users
 CREATE TABLE admin (
-  id INT PRIMARY KEY AUTO_INCREMENT,
+  id SERIAL PRIMARY KEY,
   username VARCHAR(50) UNIQUE NOT NULL,
   password_hash VARCHAR(255) NOT NULL,
   name VARCHAR(100),
@@ -31,7 +31,7 @@ CREATE TABLE config (
   office_lat DECIMAL(10,7) DEFAULT 28.6448000,
   office_lng DECIMAL(10,7) DEFAULT 77.1391000,
   max_distance INT DEFAULT 500,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Leave types config
@@ -48,212 +48,170 @@ CREATE TABLE leave_types (
 CREATE TABLE departments (
   id VARCHAR(30) PRIMARY KEY,
   name VARCHAR(100) UNIQUE NOT NULL,
-  head VARCHAR(100),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Employees (the core table)
+-- Employees
 CREATE TABLE employees (
-  id VARCHAR(30) PRIMARY KEY,
-  employee_code VARCHAR(50) UNIQUE,
+  id VARCHAR(20) PRIMARY KEY,
   name VARCHAR(100) NOT NULL,
   email VARCHAR(100) UNIQUE NOT NULL,
-  password_hash VARCHAR(255) NOT NULL,
   phone VARCHAR(20),
-  department VARCHAR(100),
+  department VARCHAR(30) REFERENCES departments(id),
   designation VARCHAR(100),
-  join_date DATE,
-  dob DATE,
-  gender VARCHAR(20),
-  address TEXT,
-  emergency_name VARCHAR(100),
-  emergency_phone VARCHAR(20),
-  emergency_relation VARCHAR(50),
-  basic DECIMAL(10,2) DEFAULT 0,
-  hra DECIMAL(10,2) DEFAULT 0,
-  allowances DECIMAL(10,2) DEFAULT 0,
-  leave_balance JSON,
-  status VARCHAR(20) DEFAULT 'active',
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  INDEX idx_status (status),
-  INDEX idx_department (department)
+  ctc DECIMAL(10,2) DEFAULT 0,
+  doj DATE,
+  password_hash VARCHAR(255),
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- QR codes (daily unique)
+CREATE TABLE qr_codes (
+  id VARCHAR(50) PRIMARY KEY,
+  qr_date DATE UNIQUE NOT NULL,
+  qr_secret VARCHAR(100) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Attendance records
 CREATE TABLE attendance (
-  id VARCHAR(30) PRIMARY KEY,
-  employee_id VARCHAR(30) NOT NULL,
+  id SERIAL PRIMARY KEY,
+  employee_id VARCHAR(20) REFERENCES employees(id),
   date DATE NOT NULL,
   check_in TIME,
   check_out TIME,
-  in_status VARCHAR(20),
-  out_status VARCHAR(20),
-  late_minutes INT DEFAULT 0,
-  overtime_minutes INT DEFAULT 0,
-  early_out_minutes INT DEFAULT 0,
-  worked_minutes INT DEFAULT 0,
-  check_in_location JSON,
-  check_out_location JSON,
-  qr_code VARCHAR(100),
-  mode VARCHAR(20) DEFAULT 'office',
-  manual_by VARCHAR(100),
-  manual_reason TEXT,
+  location_lat DECIMAL(10,7),
+  location_lng DECIMAL(10,7),
+  location_accuracy INT,
+  qr_id VARCHAR(50) REFERENCES qr_codes(id),
+  late_by INT,
+  early_by INT,
+  overtime INT,
+  status VARCHAR(20) DEFAULT 'present',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE KEY uk_emp_date (employee_id, date),
-  FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE CASCADE,
-  INDEX idx_date (date),
-  INDEX idx_emp (employee_id)
+  UNIQUE(employee_id, date)
 );
 
--- Leave requests
+-- Leave applications
 CREATE TABLE leaves (
-  id VARCHAR(30) PRIMARY KEY,
-  employee_id VARCHAR(30) NOT NULL,
-  type VARCHAR(20),
-  from_date DATE NOT NULL,
-  to_date DATE NOT NULL,
-  half_day BOOLEAN DEFAULT FALSE,
+  id SERIAL PRIMARY KEY,
+  employee_id VARCHAR(20) REFERENCES employees(id),
+  leave_type VARCHAR(20) REFERENCES leave_types(id),
+  start_date DATE NOT NULL,
+  end_date DATE NOT NULL,
+  days INT NOT NULL,
   reason TEXT,
   status VARCHAR(20) DEFAULT 'pending',
-  applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  processed_at TIMESTAMP NULL,
-  processed_by VARCHAR(100),
-  FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE CASCADE,
-  INDEX idx_status (status),
-  INDEX idx_emp (employee_id)
-);
-
--- Holiday calendar
-CREATE TABLE holidays (
-  id VARCHAR(30) PRIMARY KEY,
-  date DATE NOT NULL,
-  name VARCHAR(100) NOT NULL,
-  type VARCHAR(20) DEFAULT 'national',
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  INDEX idx_date (date)
-);
-
--- Notices/Announcements
-CREATE TABLE notices (
-  id VARCHAR(30) PRIMARY KEY,
-  title VARCHAR(200) NOT NULL,
-  body TEXT,
-  priority VARCHAR(20) DEFAULT 'normal',
-  for_employee_id VARCHAR(30) NULL,
-  posted_by VARCHAR(100),
-  posted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (for_employee_id) REFERENCES employees(id) ON DELETE CASCADE,
-  INDEX idx_emp (for_employee_id)
-);
-
--- Regularization requests
-CREATE TABLE regularizations (
-  id VARCHAR(30) PRIMARY KEY,
-  employee_id VARCHAR(30) NOT NULL,
-  date DATE NOT NULL,
-  check_in TIME,
-  check_out TIME,
-  reason TEXT,
-  status VARCHAR(20) DEFAULT 'pending',
-  applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  processed_at TIMESTAMP NULL,
-  processed_by VARCHAR(100),
-  FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE CASCADE,
-  INDEX idx_status (status)
-);
-
--- Payroll records
-CREATE TABLE payroll (
-  id VARCHAR(30) PRIMARY KEY,
-  employee_id VARCHAR(30) NOT NULL,
-  month INT NOT NULL,
-  year INT NOT NULL,
-  working_days INT,
-  present_days INT,
-  paid_leave_days DECIMAL(5,1),
-  lop_days DECIMAL(5,1),
-  total_late_min INT,
-  total_ot_min INT,
-  earnings JSON,
-  deductions JSON,
-  net_salary DECIMAL(12,2),
-  status VARCHAR(20) DEFAULT 'pending',
-  processed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  processed_by VARCHAR(100),
-  paid_at DATE NULL,
-  payment_mode VARCHAR(50),
-  transaction_id VARCHAR(100),
-  payment_remarks TEXT,
-  paid_by VARCHAR(100),
-  UNIQUE KEY uk_emp_month (employee_id, month, year),
-  FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE CASCADE,
-  INDEX idx_status (status)
-);
-
--- Daily QR codes
-CREATE TABLE qr_codes (
-  date DATE PRIMARY KEY,
-  code VARCHAR(100) NOT NULL,
+  approved_by VARCHAR(20),
+  approved_at TIMESTAMP,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- ============================================================
--- DEFAULT DATA
--- ============================================================
+-- Holidays
+CREATE TABLE holidays (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  date DATE UNIQUE NOT NULL,
+  type VARCHAR(20) DEFAULT 'national',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
--- Default admin (password: admin123 - bcrypt hash)
--- This hash is generated for 'admin123' - the server.js seed script will regenerate it if missing
-INSERT INTO admin (username, password_hash, name, email) VALUES
-  ('admin', '$2a$10$rZ8X7VqK5sJqL9X8WzN3Y.Q7v2X8W3kY8wN9V8B0sJ5pP1nT4mC1y', 'Dr. Pankaj Jagya', 'admin@editone.in');
+-- Payroll
+CREATE TABLE payroll (
+  id SERIAL PRIMARY KEY,
+  employee_id VARCHAR(20) REFERENCES employees(id),
+  month INT NOT NULL,
+  year INT NOT NULL,
+  basic_salary DECIMAL(10,2),
+  hra DECIMAL(10,2),
+  conveyance DECIMAL(10,2),
+  medical DECIMAL(10,2),
+  special_allowance DECIMAL(10,2),
+  gross_salary DECIMAL(10,2),
+  pf_deduction DECIMAL(10,2),
+  esi_deduction DECIMAL(10,2),
+  professional_tax DECIMAL(10,2),
+  tds DECIMAL(10,2),
+  other_deductions DECIMAL(10,2),
+  total_deductions DECIMAL(10,2),
+  net_salary DECIMAL(10,2),
+  status VARCHAR(20) DEFAULT 'draft',
+  paid_at TIMESTAMP,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(employee_id, month, year)
+);
 
--- Default config
-INSERT INTO config (id) VALUES (1);
+-- Notices
+CREATE TABLE notices (
+  id SERIAL PRIMARY KEY,
+  title VARCHAR(200) NOT NULL,
+  content TEXT NOT NULL,
+  priority VARCHAR(20) DEFAULT 'normal',
+  valid_from DATE,
+  valid_until DATE,
+  created_by VARCHAR(20),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
--- Default leave types
+-- Attendance regularizations
+CREATE TABLE regularizations (
+  id SERIAL PRIMARY KEY,
+  employee_id VARCHAR(20) REFERENCES employees(id),
+  date DATE NOT NULL,
+  check_in TIME,
+  check_out TIME,
+  reason TEXT NOT NULL,
+  status VARCHAR(20) DEFAULT 'pending',
+  approved_by VARCHAR(20),
+  approved_at TIMESTAMP,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Insert default admin
+INSERT INTO admin (username, password_hash, name, email) 
+VALUES ('admin', '$2a$10$placeholder_hash_change_me', 'Dr. Pankaj Jagya', 'admin@editone.in');
+
+-- Insert default departments (Editone ke)
+INSERT INTO departments (id, name) VALUES
+('HR', 'Human Resources'),
+('FIN', 'Finance & Accounts'),
+('PROD', 'Production'),
+('QA', 'Quality Assurance'),
+('SALES', 'Sales & Marketing'),
+('IT', 'Information Technology'),
+('ADMIN', 'Administration'),
+('MAINT', 'Maintenance');
+
+-- Insert leave types
 INSERT INTO leave_types (id, name, annual_quota, color, is_paid, sort_order) VALUES
-  ('casual', 'Casual Leave', 12, 'yellow', TRUE, 1),
-  ('sick', 'Sick Leave', 12, 'red', TRUE, 2),
-  ('earned', 'Earned Leave', 15, 'green', TRUE, 3),
-  ('lop', 'Loss of Pay', 0, 'gray', FALSE, 4);
+('CL', 'Casual Leave', 12, 'blue', TRUE, 1),
+('SL', 'Sick Leave', 12, 'green', TRUE, 2),
+('EL', 'Earned Leave', 15, 'purple', TRUE, 3),
+('LWP', 'Leave Without Pay', 0, 'gray', FALSE, 4),
+('COMP', 'Compensatory Off', 0, 'orange', TRUE, 5);
 
--- Default departments (Editone's 8 departments)
-INSERT INTO departments (id, name, head) VALUES
-  ('dept_dm', 'Digital Marketing', 'Ramesh'),
-  ('dept_pp', 'Print Production', ''),
-  ('dept_pub', 'Publishing', ''),
-  ('dept_wd', 'Web Development', ''),
-  ('dept_ai', 'AI Automation', ''),
-  ('dept_sales', 'Sales', ''),
-  ('dept_ops', 'Operations', ''),
-  ('dept_kids', 'Editone Kids Club', '');
+-- Insert default Indian holidays
+INSERT INTO holidays (name, date, type) VALUES
+('Republic Day', '2026-01-26', 'national'),
+('Independence Day', '2026-08-15', 'national'),
+('Gandhi Jayanti', '2026-10-02', 'national'),
+('Diwali', '2026-10-20', 'festival'),
+('Holi', '2026-03-14', 'festival');
 
--- Default Indian holidays for current year (run after install)
--- Replace YEAR with actual year
-INSERT INTO holidays (id, date, name, type) VALUES
-  ('hol_rd', CONCAT(YEAR(CURDATE()), '-01-26'), 'Republic Day', 'national'),
-  ('hol_id', CONCAT(YEAR(CURDATE()), '-08-15'), 'Independence Day', 'national'),
-  ('hol_gj', CONCAT(YEAR(CURDATE()), '-10-02'), 'Gandhi Jayanti', 'national'),
-  ('hol_diw', CONCAT(YEAR(CURDATE()), '-11-01'), 'Diwali', 'festival'),
-  ('hol_holi', CONCAT(YEAR(CURDATE()), '-03-25'), 'Holi', 'festival');
+-- Insert demo employee
+INSERT INTO employees (id, name, email, phone, department, designation, ctc, doj, password_hash) 
+VALUES ('EMP001', 'Demo Employee', 'demo@editone.in', '9876543210', 'IT', 'Software Developer', 480000, '2024-01-01', '$2a$10$demo_hash_change_me');
 
--- Sample demo employee (password: demo123)
-INSERT INTO employees (id, employee_code, name, email, password_hash, phone, department, designation,
-  join_date, dob, gender, address, emergency_name, emergency_phone, emergency_relation,
-  basic, hra, allowances, leave_balance, status) VALUES
-  ('emp_demo', 'EDT001', 'Demo Employee', 'demo@editone.in',
-   '$2a$10$rZ8X7VqK5sJqL9X8WzN3Y.Q7v2X8W3kY8wN9V8B0sJ5pP1nT4mC1y',
-   '9999999999', 'Digital Marketing', 'Marketing Executive',
-   CURDATE(), '1995-05-15', 'Male', 'Naraina Industrial Area, New Delhi',
-   'Family Member', '9999999999', 'Parent',
-   25000, 10000, 5000,
-   '{"casual":12,"sick":12,"earned":15,"lop":0}',
-   'active');
+-- Insert default office config
+INSERT INTO config (office_in, office_out, overtime_cap, grace_period, working_days, ot_rate, office_name, office_lat, office_lng, max_distance) 
+VALUES ('09:00:00', '17:30:00', '21:00:00', 10, 6, 1.5, 'Editone International, Naraina', 28.6448000, 77.1391000, 500);
 
--- ============================================================
--- VERIFICATION
--- ============================================================
-SELECT 'Database created successfully' AS status;
-SELECT COUNT(*) AS admins FROM admin;
-SELECT COUNT(*) AS departments FROM departments;
-SELECT COUNT(*) AS employees FROM employees;
-SELECT COUNT(*) AS holidays FROM holidays;
+-- Create indexes for performance
+CREATE INDEX idx_attendance_employee_date ON attendance(employee_id, date);
+CREATE INDEX idx_leaves_employee ON leaves(employee_id);
+CREATE INDEX idx_payroll_employee_month_year ON payroll(employee_id, month, year);
+CREATE INDEX idx_employees_department ON employees(department);
+CREATE INDEX idx_qr_codes_date ON qr_codes(qr_date);
+
+COMMIT;
