@@ -988,7 +988,7 @@ async function bootstrap() {
     ['dept_wd', 'Web Development', ''],
     ['dept_ai', 'AI Automation', ''],
     ['dept_sales', 'Sales'],
-    ['dept_ops', 'Operations','],
+    ['dept_ops', 'Operations', ''],
     ['dept_kids', 'Editone Kids Club', ''],
   ];
   for (const d of depts) {
