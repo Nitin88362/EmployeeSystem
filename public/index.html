@@ -1,0 +1,2754 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Editone HRMS — Complete Workforce System</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0a0a0b; --panel:#131316; --panel-2:#1a1a1f; --border:#26262d;
+    --text:#f5f5f7; --muted:#8a8a93;
+    --orange:#ff6a00; --orange-2:#ff8c33;
+    --green:#10b981; --red:#ef4444; --yellow:#f59e0b; --blue:#3b82f6; --purple:#a855f7;
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font-family:'Plus Jakarta Sans',sans-serif; min-height:100vh;
+    background-image: radial-gradient(circle at 15% 10%, rgba(255,106,0,0.06), transparent 40%), radial-gradient(circle at 85% 90%, rgba(255,140,51,0.04), transparent 40%);
+  }
+  .mono { font-family:'JetBrains Mono',monospace; }
+  .btn { padding:9px 16px; border-radius:10px; font-weight:600; transition:all .15s; cursor:pointer; border:none; display:inline-flex; align-items:center; gap:8px; font-size:14px; }
+  .btn-primary { background:var(--orange); color:#fff; }
+  .btn-primary:hover { background:var(--orange-2); transform:translateY(-1px); }
+  .btn-ghost { background:var(--panel-2); color:var(--text); border:1px solid var(--border); }
+  .btn-ghost:hover { border-color:var(--orange); color:var(--orange); }
+  .btn-danger { background:rgba(239,68,68,0.15); color:var(--red); border:1px solid rgba(239,68,68,0.3); }
+  .btn-danger:hover { background:rgba(239,68,68,0.25); }
+  .btn-success { background:rgba(16,185,129,0.15); color:var(--green); border:1px solid rgba(16,185,129,0.3); }
+  .card { background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:22px; }
+  .input,.select,textarea { width:100%; padding:10px 14px; background:var(--panel-2); border:1px solid var(--border); border-radius:10px; color:var(--text); font-family:inherit; font-size:14px; transition:border .15s; }
+  .input:focus,.select:focus,textarea:focus { outline:none; border-color:var(--orange); }
+  .label { display:block; margin-bottom:5px; font-size:12px; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:.3px; }
+  .sidebar-item { padding:10px 14px; border-radius:9px; cursor:pointer; display:flex; align-items:center; gap:11px; color:var(--muted); font-weight:500; transition:all .15s; font-size:14px; }
+  .sidebar-item:hover { background:var(--panel-2); color:var(--text); }
+  .sidebar-item.active { background:rgba(255,106,0,0.12); color:var(--orange); }
+  .badge { padding:3px 9px; border-radius:999px; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.4px; display:inline-block; }
+  .badge-green { background:rgba(16,185,129,.15); color:var(--green); }
+  .badge-red { background:rgba(239,68,68,.15); color:var(--red); }
+  .badge-yellow { background:rgba(245,158,11,.15); color:var(--yellow); }
+  .badge-orange { background:rgba(255,106,0,.15); color:var(--orange); }
+  .badge-blue { background:rgba(59,130,246,.15); color:var(--blue); }
+  .badge-purple { background:rgba(168,85,247,.15); color:var(--purple); }
+  .badge-gray { background:var(--panel-2); color:var(--muted); }
+  table { width:100%; border-collapse:collapse; }
+  th { text-align:left; padding:11px 14px; font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; font-weight:600; border-bottom:1px solid var(--border); }
+  td { padding:13px 14px; border-bottom:1px solid var(--border); font-size:14px; }
+  tr:hover td { background:rgba(255,255,255,.02); }
+  .modal-bg { position:fixed; inset:0; background:rgba(0,0,0,.7); backdrop-filter:blur(8px); z-index:50; display:flex; align-items:center; justify-content:center; padding:20px; }
+  .modal { background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:24px; max-width:520px; width:100%; max-height:90vh; overflow-y:auto; }
+  .modal-lg { max-width:700px; }
+  .stat-card { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:18px; }
+  .stat-num { font-size:28px; font-weight:800; letter-spacing:-1px; line-height:1.1; }
+  ::-webkit-scrollbar { width:8px; height:8px; }
+  ::-webkit-scrollbar-track { background:var(--bg); }
+  ::-webkit-scrollbar-thumb { background:var(--border); border-radius:4px; }
+  ::-webkit-scrollbar-thumb:hover { background:var(--orange); }
+  .grid-cell { aspect-ratio:1; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:600; border-radius:5px; }
+  .grid-cell.present { background:rgba(16,185,129,.2); color:var(--green); }
+  .grid-cell.absent { background:rgba(239,68,68,.1); color:var(--red); }
+  .grid-cell.leave { background:rgba(245,158,11,.15); color:var(--yellow); }
+  .grid-cell.holiday { background:rgba(168,85,247,.15); color:var(--purple); }
+  .grid-cell.weekend { background:var(--panel-2); color:var(--muted); }
+  .grid-cell.future { background:transparent; color:var(--border); }
+  .grid-cell.wfh { background:rgba(59,130,246,.2); color:var(--blue); }
+  @keyframes pulse-glow { 0%,100% { box-shadow:0 0 0 0 rgba(255,106,0,.4); } 50% { box-shadow:0 0 0 10px rgba(255,106,0,0); } }
+  .pulse { animation:pulse-glow 2s infinite; }
+  .hover-lift { transition:transform .2s; }
+  .hover-lift:hover { transform:translateY(-2px); }
+  .gradient-text { background:linear-gradient(135deg, var(--orange), var(--orange-2)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+  .scan-frame { border:2px dashed var(--orange); border-radius:14px; padding:14px; }
+  .yearly-cell { width:14px; height:14px; border-radius:3px; cursor:pointer; transition:transform .15s; }
+  .yearly-cell:hover { transform:scale(1.4); }
+  .y-0 { background:var(--panel-2); }
+  .y-1 { background:rgba(16,185,129,.3); }
+  .y-2 { background:rgba(16,185,129,.6); }
+  .y-3 { background:rgba(16,185,129,.9); }
+  .y-l { background:rgba(245,158,11,.6); }
+  .y-h { background:rgba(168,85,247,.6); }
+  .y-a { background:rgba(239,68,68,.4); }
+  .y-w { background:rgba(138,138,147,.15); }
+  .avatar { width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700; flex-shrink:0; background:linear-gradient(135deg, var(--orange), var(--orange-2)); color:#fff; }
+  .avatar-lg { width:72px; height:72px; font-size:24px; }
+  @media print {
+    body { background:#fff !important; color:#000 !important; }
+    .no-print { display:none !important; }
+    .card { background:#fff !important; border:1px solid #ccc !important; }
+  }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+// =================== API CLIENT ===================
+const API = {
+  token: localStorage.getItem('editone_token') || null,
+  setToken(t) { this.token = t; if (t) localStorage.setItem('editone_token', t); else localStorage.removeItem('editone_token'); },
+  async req(method, path, body) {
+    const headers = { 'Content-Type': 'application/json' };
+    if (this.token) headers['Authorization'] = 'Bearer ' + this.token;
+    const opts = { method, headers };
+    if (body) opts.body = JSON.stringify(body);
+    const res = await fetch(path, opts);
+    if (res.status === 401) {
+      this.setToken(null);
+      S.user = null; S.role = null; S.view = 'landing';
+      render();
+      throw new Error('Unauthorized — please login again');
+    }
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'Request failed');
+    return data;
+  },
+  get(p) { return this.req('GET', p); },
+  post(p, b) { return this.req('POST', p, b); },
+  put(p, b) { return this.req('PUT', p, b); },
+  del(p) { return this.req('DELETE', p); },
+};
+
+// =================== STORAGE (compatibility wrapper) ===================
+// Kept minimal — actual state lives in `S` and is synced via API
+const DB = {
+  async get() { return null; },
+  async set() { return true; },
+  async del() { return true; },
+};
+
+// =================== STATE ===================
+const S = {
+  user: null, role: null, view: 'landing',
+  adminTab: 'dashboard', empTab: 'dashboard',
+  viewEmpId: null, viewEmpTab: 'overview',
+  config: { officeIn:'09:00', officeOut:'17:30', overtimeCap:'21:00', gracePeriod:10, workingDays:6, otRate:1.5,
+            officeLat: 28.6448, officeLng: 77.1391, officeName: 'Editone International, Naraina', maxDistance: 500 },
+  leaveTypes: [
+    { id:'casual', name:'Casual Leave', annual:12, color:'yellow', paid:true },
+    { id:'sick', name:'Sick Leave', annual:12, color:'red', paid:true },
+    { id:'earned', name:'Earned Leave', annual:15, color:'green', paid:true },
+    { id:'lop', name:'Loss of Pay', annual:0, color:'gray', paid:false },
+  ],
+  departments: [], employees: [], attendance: [], leaves: [],
+  holidays: [], notices: [], regularizations: [], payroll: [],
+  todayQR: null,
+  selMonth: new Date().getMonth(), selYear: new Date().getFullYear(),
+  scanning: false, scanner: null, empLocation: null,
+  modal: null, search: '',
+};
+
+// =================== UTILITIES ===================
+const today = () => new Date().toISOString().split('T')[0];
+const nowHM = () => { const d=new Date(); return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; };
+const uid = () => Date.now().toString(36) + Math.random().toString(36).substr(2,5);
+const fmtDate = d => d ? new Date(d).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : '—';
+const fmtShortDate = d => d ? new Date(d).toLocaleDateString('en-IN',{day:'2-digit',month:'short'}) : '—';
+const fmtDateTime = d => new Date(d).toLocaleString('en-IN',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+const monthName = m => ['January','February','March','April','May','June','July','August','September','October','November','December'][m];
+const shortMonth = m => ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][m];
+const timeToMin = t => { if(!t) return 0; const [h,m] = t.split(':').map(Number); return h*60+(m||0); };
+const minToTime = m => `${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`;
+const fmtDur = m => m<=0?'—':`${Math.floor(m/60)}h ${m%60}m`;
+const inr = n => '₹' + (n||0).toLocaleString('en-IN', { maximumFractionDigits:0 });
+const daysBetween = (a,b) => Math.floor((new Date(b) - new Date(a))/86400000) + 1;
+const isWeekend = d => { const x=new Date(d); return x.getDay()===0 || x.getDay()===6; };
+const inRange = (d, from, to) => d >= from && d <= to;
+
+// Haversine distance in meters between two lat/lng points
+function distanceMeters(lat1, lng1, lat2, lng2) {
+  if (!lat1 || !lat2) return null;
+  const R = 6371000;
+  const toRad = x => x * Math.PI / 180;
+  const dLat = toRad(lat2 - lat1), dLng = toRad(lng2 - lng1);
+  const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng/2)**2;
+  return Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
+}
+
+function verifyScanLocation(loc) {
+  // Returns {ok, distance, message, badge}
+  if (!loc || !loc.lat) return { ok:false, message:'Location not captured', badge:'badge-red' };
+  if (!S.config.officeLat) return { ok:true, message:'Office location not configured', badge:'badge-yellow' };
+  const dist = distanceMeters(loc.lat, loc.lng, S.config.officeLat, S.config.officeLng);
+  if (dist === null) return { ok:true, message:'Distance unknown', badge:'badge-yellow' };
+  if (dist <= S.config.maxDistance) return { ok:true, distance:dist, message:`✓ Verified · ${dist}m from office`, badge:'badge-green' };
+  if (dist <= S.config.maxDistance * 4) return { ok:false, distance:dist, message:`⚠ ${dist}m from office (outside range)`, badge:'badge-yellow' };
+  return { ok:false, distance:dist, message:`❌ ${(dist/1000).toFixed(1)}km from office — suspicious`, badge:'badge-red' };
+}
+
+function computeAtt(checkIn, checkOut, cfg) {
+  const oI=timeToMin(cfg.officeIn), oO=timeToMin(cfg.officeOut), cap=timeToMin(cfg.overtimeCap);
+  const iM = checkIn?timeToMin(checkIn):0, oM = checkOut?timeToMin(checkOut):0;
+  const r = { lateMinutes:0, earlyOutMinutes:0, overtimeMinutes:0, workedMinutes:0, inStatus:'on-time', outStatus:'pending' };
+  if (checkIn) {
+    if (iM > oI + cfg.gracePeriod) { r.lateMinutes = iM - oI; r.inStatus='late'; }
+    else if (iM < oI) r.inStatus='early';
+  }
+  if (checkOut) {
+    r.workedMinutes = Math.max(0, Math.min(oM, cap) - Math.max(iM, 0));
+    if (oM < oO) { r.earlyOutMinutes = oO - oM; r.outStatus='early-out'; }
+    else if (oM > oO) { r.overtimeMinutes = Math.min(oM, cap) - oO; r.outStatus='overtime'; }
+    else r.outStatus='on-time';
+  }
+  return r;
+}
+
+function workingDaysIn(year, month, holidays, weeklyOff=1) {
+  // weeklyOff: 0=no off, 1=sunday only, 2=sat+sun
+  const days = new Date(year, month+1, 0).getDate();
+  let count = 0;
+  for (let d=1; d<=days; d++) {
+    const dt = new Date(year, month, d);
+    const dow = dt.getDay();
+    const dStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const isOff = weeklyOff === 2 ? (dow===0 || dow===6) : (dow === 0);
+    const isHoliday = holidays.some(h => h.date === dStr);
+    if (!isOff && !isHoliday) count++;
+  }
+  return count;
+}
+
+// =================== INIT (loads everything from backend) ===================
+async function init() {
+  try {
+    const [config, leaveTypes, departments, employees, attendance, leaves, holidays, notices, regularizations, payroll, qr] = await Promise.all([
+      API.get('/api/config'),
+      API.get('/api/leave-types'),
+      API.get('/api/departments'),
+      S.role === 'admin' ? API.get('/api/employees') : Promise.resolve([]),
+      API.get('/api/attendance'),
+      API.get('/api/leaves'),
+      API.get('/api/holidays'),
+      API.get('/api/notices'),
+      API.get('/api/regularizations'),
+      API.get('/api/payroll'),
+      API.get('/api/qr/today'),
+    ]);
+    S.config = config;
+    S.leaveTypes = leaveTypes;
+    S.departments = departments;
+    S.employees = employees;
+    S.attendance = attendance;
+    S.leaves = leaves;
+    S.holidays = holidays;
+    S.notices = notices;
+    S.regularizations = regularizations;
+    S.payroll = payroll;
+    S.todayQR = qr;
+  } catch (e) {
+    console.error('Init error:', e);
+  }
+}
+
+async function refreshData() {
+  await init();
+  render();
+}
+
+// Legacy save helpers — now route through API. Kept as no-ops for compatibility.
+const save = {
+  emp: () => Promise.resolve(),
+  att: () => Promise.resolve(),
+  leave: () => Promise.resolve(),
+  dept: () => Promise.resolve(),
+  hol: () => Promise.resolve(),
+  notice: () => Promise.resolve(),
+  reg: () => Promise.resolve(),
+  payroll: () => Promise.resolve(),
+  config: () => Promise.resolve(),
+  ltypes: () => Promise.resolve(),
+};
+
+// =================== ROUTER ===================
+function render() {
+  const app = document.getElementById('app');
+  if (S.view === 'landing') app.innerHTML = vLanding();
+  else if (S.view === 'adminLogin') app.innerHTML = vAdminLogin();
+  else if (S.view === 'empLogin') app.innerHTML = vEmpLogin();
+  else if (S.view === 'admin') app.innerHTML = vAdmin();
+  else if (S.view === 'employee') app.innerHTML = vEmp();
+  attachHandlers();
+  postRender();
+}
+
+function postRender() {
+  if (S.view === 'admin' && S.adminTab === 'qr') drawQR();
+  if (S.view === 'admin' && S.adminTab === 'dashboard') drawDashboardCharts();
+  if (S.view === 'admin' && S.adminTab === 'reports') drawReports();
+}
+
+// =================== LANDING ===================
+function vLanding() {
+  return `
+  <div class="min-h-screen flex flex-col">
+    <header class="px-8 py-5 flex justify-between items-center border-b border-[var(--border)]">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background:linear-gradient(135deg,var(--orange),var(--orange-2));">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>
+        </div>
+        <div><div class="font-bold text-base">Editone HRMS</div><div class="text-xs text-[var(--muted)]">Complete Workforce System</div></div>
+      </div>
+      <div class="text-sm text-[var(--muted)] mono hidden md:block">${new Date().toLocaleDateString('en-IN',{weekday:'long',day:'2-digit',month:'long',year:'numeric'})}</div>
+    </header>
+    <main class="flex-1 flex items-center justify-center px-6 py-12">
+      <div class="max-w-5xl w-full text-center">
+        <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs mono mb-6" style="background:rgba(255,106,0,.1); color:var(--orange);">
+          <span class="w-2 h-2 rounded-full bg-[var(--orange)] pulse"></span>ENTERPRISE GRADE · QR + LOCATION + PAYROLL
+        </div>
+        <h1 class="text-4xl md:text-6xl font-extrabold mb-4 tracking-tight">Complete HR Suite,<br><span class="gradient-text">From Attendance to Payslip.</span></h1>
+        <p class="text-[var(--muted)] text-lg mb-10 max-w-2xl mx-auto">QR attendance · Multiple leave types · Holidays · Payroll · Regularization · Notices · Reports · Yearly heatmap — sab kuch ek hi system mein.</p>
+        <div class="grid md:grid-cols-2 gap-5 max-w-3xl mx-auto">
+          <div class="card hover-lift cursor-pointer text-left" id="goAdmin">
+            <div class="w-12 h-12 rounded-xl flex items-center justify-center mb-4" style="background:rgba(255,106,0,.15);">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+            </div>
+            <h3 class="text-xl font-bold mb-1">Admin / HR Panel</h3>
+            <p class="text-sm text-[var(--muted)] mb-4">Employees, payroll, leaves, holidays, reports — full control.</p>
+            <button class="btn btn-primary w-full justify-center">Admin Login →</button>
+          </div>
+          <div class="card hover-lift cursor-pointer text-left" id="goEmp">
+            <div class="w-12 h-12 rounded-xl flex items-center justify-center mb-4" style="background:rgba(16,185,129,.15);">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            </div>
+            <h3 class="text-xl font-bold mb-1">Employee Self-Service</h3>
+            <p class="text-sm text-[var(--muted)] mb-4">Scan, leave, payslip, profile, regularization — apne aap.</p>
+            <button class="btn btn-ghost w-full justify-center">Employee Login →</button>
+          </div>
+        </div>
+        <div class="mt-10 text-xs text-[var(--muted)] mono">Admin: <span class="text-[var(--orange)]">admin / admin123</span> &nbsp;|&nbsp; Demo: <span class="text-[var(--green)]">demo@editone.in / demo123</span></div>
+      </div>
+    </main>
+  </div>`;
+}
+
+function vAdminLogin() {
+  return `<div class="min-h-screen flex items-center justify-center px-6"><div class="card max-w-md w-full">
+    <button id="backHome" class="text-sm text-[var(--muted)] hover:text-[var(--orange)] mb-4">← Back</button>
+    <div class="w-14 h-14 rounded-xl flex items-center justify-center mb-5" style="background:linear-gradient(135deg,var(--orange),var(--orange-2));">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+    </div>
+    <h2 class="text-2xl font-bold mb-1">Admin / HR Login</h2>
+    <p class="text-sm text-[var(--muted)] mb-6">Editone International Control Panel</p>
+    <div class="space-y-3">
+      <div><label class="label">Username</label><input id="aU" class="input" placeholder="admin" /></div>
+      <div><label class="label">Password</label><input id="aP" type="password" class="input" placeholder="••••••••" /></div>
+      <div id="aErr" class="text-sm text-[var(--red)]"></div>
+      <button id="aSubmit" class="btn btn-primary w-full justify-center mt-2">Login</button>
+    </div>
+  </div></div>`;
+}
+
+function vEmpLogin() {
+  return `<div class="min-h-screen flex items-center justify-center px-6"><div class="card max-w-md w-full">
+    <button id="backHome" class="text-sm text-[var(--muted)] hover:text-[var(--orange)] mb-4">← Back</button>
+    <div class="w-14 h-14 rounded-xl flex items-center justify-center mb-5" style="background:rgba(16,185,129,.15);">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2.5"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    </div>
+    <h2 class="text-2xl font-bold mb-1">Employee Login</h2>
+    <p class="text-sm text-[var(--muted)] mb-6">Apna email aur password daalein</p>
+    <div class="space-y-3">
+      <div><label class="label">Email</label><input id="eE" class="input" placeholder="you@editone.in" /></div>
+      <div><label class="label">Password</label><input id="eP" type="password" class="input" placeholder="••••••••" /></div>
+      <div id="eErr" class="text-sm text-[var(--red)]"></div>
+      <button id="eSubmit" class="btn btn-primary w-full justify-center mt-2">Login</button>
+    </div>
+  </div></div>`;
+}
+
+// =================== ADMIN ===================
+function vAdmin() {
+  const tabs = [
+    ['dashboard','Dashboard','📊'],
+    ['qr',"Today's QR",'📱'],
+    ['employees','Employees','👥'],
+    ['departments','Departments','🏢'],
+    ['attendance','Attendance','✓'],
+    ['yearly','Yearly View','📅'],
+    ['payroll','Payroll','💰'],
+    ['leaves','Leaves','🗓'],
+    ['regularization','Regularization','✏️'],
+    ['holidays','Holidays','🎉'],
+    ['notices','Notices','📢'],
+    ['reports','Reports','📈'],
+    ['settings','Settings','⚙️'],
+  ];
+  return `<div class="min-h-screen flex">
+    <aside class="w-60 border-r border-[var(--border)] bg-[var(--panel)] p-3 flex flex-col" style="position:sticky; top:0; height:100vh;">
+      <div class="flex items-center gap-2 mb-6 px-2 pt-2">
+        <div class="w-9 h-9 rounded-lg flex items-center justify-center" style="background:linear-gradient(135deg,var(--orange),var(--orange-2));">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M9 12l2 2 4-4"/></svg>
+        </div>
+        <div><div class="font-bold text-sm">Editone HRMS</div><div class="text-xs text-[var(--muted)]">Admin Panel</div></div>
+      </div>
+      <nav class="space-y-1 flex-1 overflow-y-auto">
+        ${tabs.map(([id,lbl,ic]) => `<div class="sidebar-item ${S.adminTab===id?'active':''}" data-tab="${id}"><span style="width:20px;text-align:center;">${ic}</span>${lbl}</div>`).join('')}
+      </nav>
+      <button id="aLogout" class="sidebar-item text-sm border-t border-[var(--border)] mt-2 pt-3">
+        <span style="width:20px;text-align:center;">🚪</span> Logout
+      </button>
+    </aside>
+    <main class="flex-1 p-7 overflow-y-auto" style="max-height:100vh;">
+      ${aRoute()}
+    </main>
+    ${S.modal ? vModal() : ''}
+  </div>`;
+}
+
+function aRoute() {
+  if (S.viewEmpId) return aEmployeeDetail();
+  switch(S.adminTab) {
+    case 'dashboard': return aDashboard();
+    case 'qr': return aQR();
+    case 'employees': return aEmployees();
+    case 'departments': return aDepartments();
+    case 'attendance': return aAttendance();
+    case 'yearly': return aYearly();
+    case 'payroll': return aPayroll();
+    case 'leaves': return aLeaves();
+    case 'regularization': return aRegularization();
+    case 'holidays': return aHolidays();
+    case 'notices': return aNotices();
+    case 'reports': return aReports();
+    case 'settings': return aSettings();
+  }
+  return '';
+}
+
+// ---------- ADMIN: DASHBOARD ----------
+function aDashboard() {
+  const t = today();
+  const todayAtt = S.attendance.filter(a => a.date === t);
+  const todayLate = todayAtt.filter(a => a.lateMinutes > 0).length;
+  const todayOT = todayAtt.reduce((s,a) => s + (a.overtimeMinutes||0), 0);
+  const pendingLeaves = S.leaves.filter(l => l.status === 'pending').length;
+  const pendingReg = S.regularizations.filter(r => r.status === 'pending').length;
+  const activeEmps = S.employees.filter(e => e.status === 'active').length;
+  
+  // Upcoming holidays
+  const upcomingHolidays = S.holidays.filter(h => h.date >= t).sort((a,b) => a.date.localeCompare(b.date)).slice(0, 3);
+  
+  // Birthdays this month
+  const thisMonth = new Date().getMonth();
+  const birthdays = S.employees.filter(e => e.dob && new Date(e.dob).getMonth() === thisMonth);
+
+  return `
+    <div class="mb-7 flex justify-between items-end flex-wrap gap-3">
+      <div>
+        <h1 class="text-3xl font-extrabold mb-1">Welcome back, ${S.user.name.split(' ')[0]} 👋</h1>
+        <p class="text-[var(--muted)]">${new Date().toLocaleDateString('en-IN',{weekday:'long',day:'2-digit',month:'long',year:'numeric'})}</p>
+      </div>
+      <div class="flex gap-2">
+        <button class="btn btn-ghost" data-tab="notices">📢 Post Notice</button>
+        <button class="btn btn-primary" data-tab="employees">+ Add Employee</button>
+      </div>
+    </div>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      <div class="stat-card"><div class="text-xs text-[var(--muted)] mb-2">TOTAL EMPLOYEES</div><div class="stat-num gradient-text">${activeEmps}</div><div class="text-xs text-[var(--muted)] mt-1">of ${S.employees.length}</div></div>
+      <div class="stat-card"><div class="text-xs text-[var(--muted)] mb-2">PRESENT TODAY</div><div class="stat-num text-[var(--green)]">${todayAtt.length}</div><div class="text-xs text-[var(--muted)] mt-1">${todayLate} late</div></div>
+      <div class="stat-card"><div class="text-xs text-[var(--muted)] mb-2">PENDING LEAVES</div><div class="stat-num text-[var(--yellow)]">${pendingLeaves}</div><div class="text-xs text-[var(--muted)] mt-1">${pendingReg} regularizations</div></div>
+      <div class="stat-card"><div class="text-xs text-[var(--muted)] mb-2">TODAY OT</div><div class="stat-num text-[var(--orange)]">${fmtDur(todayOT)}</div><div class="text-xs text-[var(--muted)] mt-1">total hours</div></div>
+    </div>
+    <div class="grid lg:grid-cols-3 gap-5 mb-5">
+      <div class="card lg:col-span-2">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="font-bold">Attendance Trend (Last 7 Days)</h3>
+          <span class="text-xs text-[var(--muted)] mono">${new Date(Date.now()-6*86400000).toLocaleDateString('en-IN')} → today</span>
+        </div>
+        <canvas id="trendChart" style="max-height:240px"></canvas>
+      </div>
+      <div class="card">
+        <h3 class="font-bold mb-4">Department Split</h3>
+        <canvas id="deptChart" style="max-height:240px"></canvas>
+      </div>
+    </div>
+    <div class="grid md:grid-cols-3 gap-5">
+      <div class="card">
+        <h3 class="font-bold mb-4">Today's Check-ins</h3>
+        ${todayAtt.length===0 ? '<p class="text-sm text-[var(--muted)]">Abhi tak koi check-in nahi hua.</p>' : `
+          <div class="space-y-2 max-h-80 overflow-y-auto">
+            ${todayAtt.slice(0,8).map(a => { const e=S.employees.find(x=>x.id===a.employeeId); const v=verifyScanLocation(a.location); return `
+              <div class="flex justify-between items-center p-2 rounded-lg bg-[var(--panel-2)] cursor-pointer openEmp" data-id="${a.employeeId}">
+                <div class="flex items-center gap-2">
+                  <div class="avatar" style="width:32px;height:32px;font-size:12px;">${(e?.name||'?')[0]}</div>
+                  <div><div class="text-sm font-semibold">${e?.name||'?'}</div><div class="text-xs text-[var(--muted)] mono">${a.checkIn}${a.checkOut?` → ${a.checkOut}`:''}</div></div>
+                </div>
+                <div class="text-right flex flex-col gap-1 items-end">
+                  <span class="badge ${v.badge}">${v.distance ? `${v.distance}m` : 'No loc'}</span>
+                  <div class="flex gap-1">${a.lateMinutes>0?'<span class="badge badge-red">LATE</span>':'<span class="badge badge-green">ON-TIME</span>'}${a.overtimeMinutes>0?`<span class="badge badge-orange">OT</span>`:''}</div>
+                </div>
+              </div>`; }).join('')}
+          </div>`}
+      </div>
+      <div class="card">
+        <h3 class="font-bold mb-4">Upcoming Holidays</h3>
+        ${upcomingHolidays.length===0 ? '<p class="text-sm text-[var(--muted)]">Koi upcoming holiday nahi.</p>' : `
+          <div class="space-y-2">${upcomingHolidays.map(h => `
+            <div class="p-3 rounded-lg bg-[var(--panel-2)] flex justify-between items-center">
+              <div><div class="text-sm font-semibold">${h.name}</div><div class="text-xs text-[var(--muted)]">${fmtDate(h.date)}</div></div>
+              <span class="badge badge-purple">${h.type}</span>
+            </div>`).join('')}</div>`}
+      </div>
+      <div class="card">
+        <h3 class="font-bold mb-4">${shortMonth(thisMonth)} Birthdays 🎂</h3>
+        ${birthdays.length===0 ? '<p class="text-sm text-[var(--muted)]">Is month koi birthday nahi.</p>' : `
+          <div class="space-y-2">${birthdays.map(e => `
+            <div class="p-3 rounded-lg bg-[var(--panel-2)] flex items-center gap-3">
+              <div class="avatar" style="width:36px;height:36px;">${e.name[0]}</div>
+              <div><div class="text-sm font-semibold">${e.name}</div><div class="text-xs text-[var(--muted)]">${fmtShortDate(e.dob)}</div></div>
+            </div>`).join('')}</div>`}
+      </div>
+    </div>`;
+}
+
+function drawDashboardCharts() {
+  const trendCanvas = document.getElementById('trendChart');
+  if (trendCanvas) {
+    const labels = [], pres = [], abs = [];
+    for (let i=6; i>=0; i--) {
+      const d = new Date(Date.now() - i*86400000);
+      const ds = d.toISOString().split('T')[0];
+      labels.push(d.toLocaleDateString('en-IN',{weekday:'short'}));
+      const c = S.attendance.filter(a => a.date === ds).length;
+      pres.push(c);
+      abs.push(Math.max(0, S.employees.filter(e=>e.status==='active').length - c));
+    }
+    new Chart(trendCanvas, {
+      type:'bar',
+      data:{ labels, datasets:[
+        { label:'Present', data:pres, backgroundColor:'rgba(16,185,129,0.7)', borderRadius:6 },
+        { label:'Absent', data:abs, backgroundColor:'rgba(239,68,68,0.5)', borderRadius:6 }
+      ]},
+      options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ labels:{ color:'#8a8a93' } } },
+        scales:{ x:{ ticks:{color:'#8a8a93'}, grid:{display:false} }, y:{ ticks:{color:'#8a8a93'}, grid:{color:'#26262d'} } } }
+    });
+  }
+  const deptCanvas = document.getElementById('deptChart');
+  if (deptCanvas) {
+    const counts = {};
+    S.employees.forEach(e => { counts[e.department] = (counts[e.department]||0) + 1; });
+    const labels = Object.keys(counts), data = Object.values(counts);
+    new Chart(deptCanvas, {
+      type:'doughnut',
+      data:{ labels, datasets:[{ data, backgroundColor:['#ff6a00','#10b981','#3b82f6','#a855f7','#f59e0b','#ef4444','#06b6d4','#ec4899'], borderColor:'#131316', borderWidth:2 }] },
+      options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ labels:{ color:'#8a8a93', font:{size:11} } } } }
+    });
+  }
+}
+
+// ---------- ADMIN: QR ----------
+function aQR() {
+  return `
+    <div class="mb-6 flex justify-between items-end flex-wrap gap-3">
+      <div><h1 class="text-3xl font-extrabold mb-1">Today's QR Code</h1><p class="text-[var(--muted)]">Daily 12 AM par auto-rotate. Print karke entrance pe lagayein.</p></div>
+      <button id="refreshQR" class="btn btn-ghost">↻ Force Refresh</button>
+    </div>
+    <div class="grid md:grid-cols-2 gap-5">
+      <div class="card text-center">
+        <div class="text-xs mono text-[var(--muted)] mb-4">VALID FOR ${today()}</div>
+        <div id="qrcode" class="inline-block bg-white p-6 rounded-2xl mb-4"></div>
+        <div class="mono text-xs text-[var(--muted)] break-all px-4">${S.todayQR?.code||''}</div>
+        <div class="mt-4 flex gap-2 justify-center">
+          <button id="dlQR" class="btn btn-ghost text-sm">⬇ Download</button>
+          <button id="printQR" class="btn btn-ghost text-sm">🖨 Print</button>
+        </div>
+      </div>
+      <div class="card">
+        <h3 class="font-bold mb-4">How It Works</h3>
+        <ol class="space-y-3 text-sm">
+          ${['QR print karke office entrance pe lagayein','Employee app/site se login karke "Scan" pe click karein','Camera open hoga, QR scan karein','Time + Location automatic record ho jayega','Wapas jaate waqt dobara scan = Check-out','Daily 12 AM par naya QR auto-generate'].map((t,i)=>`
+            <li class="flex gap-3"><div class="w-7 h-7 rounded-full flex items-center justify-center font-bold flex-shrink-0" style="background:rgba(255,106,0,.15);color:var(--orange);">${i+1}</div><div>${t}</div></li>`).join('')}
+        </ol>
+      </div>
+    </div>`;
+}
+
+function drawQR() {
+  const el = document.getElementById('qrcode');
+  if (!el || !S.todayQR) return;
+  el.innerHTML = '';
+  const qr = qrcode(0, 'M'); qr.addData(S.todayQR.code); qr.make();
+  el.innerHTML = qr.createImgTag(6, 8);
+}
+
+// ---------- ADMIN: EMPLOYEES ----------
+function aEmployees() {
+  const filtered = S.employees.filter(e => 
+    !S.search || e.name.toLowerCase().includes(S.search.toLowerCase()) || 
+    e.email.toLowerCase().includes(S.search.toLowerCase()) || 
+    e.employeeCode?.toLowerCase().includes(S.search.toLowerCase()));
+  return `
+    <div class="mb-6 flex justify-between items-end flex-wrap gap-3">
+      <div><h1 class="text-3xl font-extrabold mb-1">Employees</h1><p class="text-[var(--muted)]">${S.employees.length} total · ${S.employees.filter(e=>e.status==='active').length} active</p></div>
+      <div class="flex gap-2">
+        <input id="empSearch" class="input" placeholder="Search by name, email, code..." style="width:280px" value="${S.search}">
+        <button id="exportEmp" class="btn btn-ghost">⬇ Export CSV</button>
+        <button id="addEmp" class="btn btn-primary">+ Add Employee</button>
+      </div>
+    </div>
+    <div class="card p-0 overflow-hidden">
+      <div class="overflow-x-auto">
+        <table>
+          <thead><tr><th>Employee</th><th>Code</th><th>Department</th><th>Designation</th><th>Joined</th><th>Salary</th><th>Status</th><th></th></tr></thead>
+          <tbody>
+            ${filtered.length===0 ? '<tr><td colspan="8" class="text-center text-[var(--muted)] py-10">Koi employee nahi mila.</td></tr>' :
+              filtered.map(e => `<tr class="cursor-pointer openEmp" data-id="${e.id}">
+                <td><div class="flex items-center gap-3">
+                  <div class="avatar">${e.name[0]}</div>
+                  <div><div class="font-semibold">${e.name}</div><div class="text-xs text-[var(--muted)]">${e.email}</div></div>
+                </div></td>
+                <td class="mono text-xs">${e.employeeCode||'—'}</td>
+                <td><span class="badge badge-orange">${e.department}</span></td>
+                <td class="text-sm text-[var(--muted)]">${e.designation||'—'}</td>
+                <td class="text-sm text-[var(--muted)]">${fmtDate(e.joinDate)}</td>
+                <td class="mono text-sm">${inr(e.salary?.total)}</td>
+                <td><span class="badge ${e.status==='active'?'badge-green':'badge-gray'}">${e.status||'active'}</span></td>
+                <td class="text-right whitespace-nowrap" onclick="event.stopPropagation()">
+                  <button class="btn btn-ghost text-xs viewEmp" data-id="${e.id}">View</button>
+                  <button class="btn btn-ghost text-xs editEmp" data-id="${e.id}">Edit</button>
+                  <button class="btn btn-danger text-xs delEmp" data-id="${e.id}">×</button>
+                </td>
+              </tr>`).join('')
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+// ---------- ADMIN: DEPARTMENTS ----------
+function aDepartments() {
+  return `
+    <div class="mb-6 flex justify-between items-end">
+      <div><h1 class="text-3xl font-extrabold mb-1">Departments</h1><p class="text-[var(--muted)]">Editone International ke ${S.departments.length} departments</p></div>
+      <button id="addDept" class="btn btn-primary">+ Add Department</button>
+    </div>
+    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+      ${S.departments.map(d => { const count = S.employees.filter(e => e.department === d.name).length; return `
+        <div class="card hover-lift">
+          <div class="flex justify-between items-start mb-3">
+            <div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background:rgba(255,106,0,.15);"><span class="text-xl">🏢</span></div>
+            <div class="flex gap-1">
+              <button class="btn btn-ghost text-xs editDept" data-id="${d.id}">Edit</button>
+              <button class="btn btn-danger text-xs delDept" data-id="${d.id}">×</button>
+            </div>
+          </div>
+          <h3 class="font-bold text-lg mb-1">${d.name}</h3>
+          <div class="text-sm text-[var(--muted)] mb-2">Head: ${d.head || '—'}</div>
+          <div class="text-sm">${count} employee${count!==1?'s':''}</div>
+        </div>`; }).join('')}
+    </div>`;
+}
+
+// ---------- ADMIN: ATTENDANCE (MONTHLY) ----------
+// ---------- ADMIN: EMPLOYEE DETAIL (full dashboard for ONE employee) ----------
+function aEmployeeDetail() {
+  const e = S.employees.find(x => x.id === S.viewEmpId);
+  if (!e) { S.viewEmpId = null; return aEmployees(); }
+  const tab = S.viewEmpTab || 'overview';
+  return `
+    <div class="mb-5 flex items-center gap-3 flex-wrap">
+      <button id="backEmpList" class="btn btn-ghost text-sm">← Back to Employees</button>
+      <span class="text-sm text-[var(--muted)]">/ ${e.name}</span>
+    </div>
+    <div class="card mb-5" style="background:linear-gradient(135deg, rgba(255,106,0,.08), rgba(255,140,51,.03));">
+      <div class="flex items-center gap-5 flex-wrap">
+        <div class="avatar avatar-lg" style="width:80px;height:80px;font-size:28px;">${e.name[0]}</div>
+        <div class="flex-1 min-w-[200px]">
+          <div class="flex items-center gap-2 flex-wrap">
+            <h1 class="text-2xl font-extrabold">${e.name}</h1>
+            <span class="badge ${e.status==='active'?'badge-green':'badge-gray'}">${e.status||'active'}</span>
+          </div>
+          <div class="text-[var(--muted)] mb-1">${e.designation || '—'} · ${e.department}</div>
+          <div class="text-xs text-[var(--muted)] mono">Code: ${e.employeeCode || '—'} · Joined ${fmtDate(e.joinDate)} · CTC ${inr(e.salary?.total)}</div>
+        </div>
+        <div class="flex gap-2">
+          <button class="btn btn-ghost editEmp" data-id="${e.id}">✏️ Edit</button>
+          <button class="btn btn-primary" id="empProcessPay">💰 Process Salary</button>
+        </div>
+      </div>
+    </div>
+    <div class="flex gap-1 mb-5 border-b border-[var(--border)] overflow-x-auto">
+      ${[['overview','Overview'],['attendance','Attendance Log'],['yearly','Yearly View'],['leaves','Leaves'],['payroll','Payroll History'],['regularization','Regularizations']].map(([id,lbl]) => 
+        `<button class="px-4 py-2 text-sm font-semibold whitespace-nowrap empDtlTab ${tab===id?'text-[var(--orange)] border-b-2 border-[var(--orange)]':'text-[var(--muted)]'}" data-tab="${id}">${lbl}</button>`
+      ).join('')}
+    </div>
+    ${tab==='overview' ? aEmpDtlOverview(e) :
+      tab==='attendance' ? aEmpDtlAttendance(e) :
+      tab==='yearly' ? aEmpDtlYearly(e) :
+      tab==='leaves' ? aEmpDtlLeaves(e) :
+      tab==='payroll' ? aEmpDtlPayroll(e) :
+      tab==='regularization' ? aEmpDtlReg(e) : ''}
+  `;
+}
+
+function aEmpDtlOverview(e) {
+  const myAtt = S.attendance.filter(a => a.employeeId === e.id);
+  const thisMonth = today().substring(0,7);
+  const monthAtt = myAtt.filter(a => a.date.startsWith(thisMonth));
+  const yearAtt = myAtt.filter(a => a.date.startsWith(new Date().getFullYear().toString()));
+  const totalOT = myAtt.reduce((s,a) => s + (a.overtimeMinutes||0), 0);
+  const monthLate = monthAtt.filter(a => a.lateMinutes > 0).length;
+  const myLeaves = S.leaves.filter(l => l.employeeId === e.id);
+  return `
+    <div class="grid md:grid-cols-4 gap-3 mb-5">
+      <div class="stat-card"><div class="text-xs text-[var(--muted)] mb-1">THIS MONTH</div><div class="stat-num text-[var(--green)]">${monthAtt.length}</div><div class="text-xs text-[var(--muted)]">present days</div></div>
+      <div class="stat-card"><div class="text-xs text-[var(--muted)] mb-1">THIS YEAR</div><div class="stat-num gradient-text">${yearAtt.length}</div><div class="text-xs text-[var(--muted)]">total days</div></div>
+      <div class="stat-card"><div class="text-xs text-[var(--muted)] mb-1">TOTAL OT</div><div class="stat-num text-[var(--orange)]">${fmtDur(totalOT)}</div><div class="text-xs text-[var(--muted)]">all-time</div></div>
+      <div class="stat-card"><div class="text-xs text-[var(--muted)] mb-1">MONTH LATE</div><div class="stat-num text-[var(--red)]">${monthLate}</div><div class="text-xs text-[var(--muted)]">days</div></div>
+    </div>
+    <div class="grid md:grid-cols-2 gap-5">
+      <div class="card">
+        <h3 class="font-bold mb-3">Personal Information</h3>
+        <div class="space-y-2 text-sm">
+          <div class="flex justify-between"><span class="text-[var(--muted)]">Email</span><span>${e.email}</span></div>
+          <div class="flex justify-between"><span class="text-[var(--muted)]">Phone</span><span class="mono">${e.phone}</span></div>
+          <div class="flex justify-between"><span class="text-[var(--muted)]">DOB</span><span>${e.dob?fmtDate(e.dob):'—'}</span></div>
+          <div class="flex justify-between"><span class="text-[var(--muted)]">Gender</span><span>${e.gender||'—'}</span></div>
+          <div class="flex justify-between gap-3"><span class="text-[var(--muted)] flex-shrink-0">Address</span><span class="text-right">${e.address||'—'}</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <h3 class="font-bold mb-3">Emergency Contact</h3>
+        <div class="space-y-2 text-sm">
+          <div class="flex justify-between"><span class="text-[var(--muted)]">Name</span><span>${e.emergency?.name||'—'}</span></div>
+          <div class="flex justify-between"><span class="text-[var(--muted)]">Phone</span><span class="mono">${e.emergency?.phone||'—'}</span></div>
+          <div class="flex justify-between"><span class="text-[var(--muted)]">Relation</span><span>${e.emergency?.relation||'—'}</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <h3 class="font-bold mb-3">Salary Structure</h3>
+        <div class="space-y-2 text-sm">
+          <div class="flex justify-between"><span class="text-[var(--muted)]">Basic</span><span class="mono">${inr(e.salary?.basic)}</span></div>
+          <div class="flex justify-between"><span class="text-[var(--muted)]">HRA</span><span class="mono">${inr(e.salary?.hra)}</span></div>
+          <div class="flex justify-between"><span class="text-[var(--muted)]">Allowances</span><span class="mono">${inr(e.salary?.allowances)}</span></div>
+          <div class="flex justify-between pt-2 border-t border-[var(--border)] font-bold"><span>Monthly CTC</span><span class="mono text-[var(--orange)]">${inr(e.salary?.total)}</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <h3 class="font-bold mb-3">Leave Balance</h3>
+        <div class="space-y-2 text-sm">
+          ${S.leaveTypes.map(t => `<div class="flex justify-between">
+            <span class="text-[var(--muted)]">${t.name}</span>
+            <span class="font-bold text-[var(--${t.color === 'gray' ? 'muted' : t.color})]">${e.leaveBalance?.[t.id]??0} / ${t.annual}</span>
+          </div>`).join('')}
+        </div>
+      </div>
+    </div>`;
+}
+
+function aEmpDtlAttendance(e) {
+  const records = S.attendance.filter(a => a.employeeId === e.id).slice().reverse();
+  return `
+    <div class="mb-4 flex justify-between items-center flex-wrap gap-2">
+      <h3 class="font-bold text-lg">Complete Attendance Log (${records.length} records)</h3>
+      <button id="empExportAtt" class="btn btn-ghost text-sm">⬇ Export</button>
+    </div>
+    <div class="card p-0 overflow-hidden">
+      <div class="overflow-x-auto">
+        <table>
+          <thead><tr><th>Date</th><th>Check In</th><th>Check Out</th><th>Worked</th><th>Late</th><th>OT</th><th>Location & Verification</th><th>Mode</th></tr></thead>
+          <tbody>
+            ${records.length===0 ? '<tr><td colspan="8" class="text-center text-[var(--muted)] py-8">Koi attendance record nahi.</td></tr>' :
+              records.map(a => {
+                const verify = verifyScanLocation(a.location);
+                const mapLink = a.location?.lat ? `https://www.openstreetmap.org/?mlat=${a.location.lat}&mlon=${a.location.lng}&zoom=16` : null;
+                const outVerify = a.checkOutLocation ? verifyScanLocation(a.checkOutLocation) : null;
+                const outMapLink = a.checkOutLocation?.lat ? `https://www.openstreetmap.org/?mlat=${a.checkOutLocation.lat}&mlon=${a.checkOutLocation.lng}&zoom=16` : null;
+                return `<tr>
+                <td>${fmtDate(a.date)}<div class="text-xs text-[var(--muted)]">${new Date(a.date).toLocaleDateString('en-IN',{weekday:'short'})}</div></td>
+                <td class="mono text-[var(--green)]">${a.checkIn||'—'}${a.lateMinutes>0?`<div class="text-xs text-[var(--red)]">+${fmtDur(a.lateMinutes)} late</div>`:''}</td>
+                <td class="mono ${a.checkOut?'text-[var(--red)]':'text-[var(--muted)]'}">${a.checkOut||'—'}${a.overtimeMinutes>0?`<div class="text-xs text-[var(--orange)]">+${fmtDur(a.overtimeMinutes)} OT</div>`:''}</td>
+                <td class="mono">${fmtDur(a.workedMinutes||0)}</td>
+                <td class="mono ${a.lateMinutes>0?'text-[var(--red)]':'text-[var(--muted)]'}">${a.lateMinutes?fmtDur(a.lateMinutes):'—'}</td>
+                <td class="mono ${a.overtimeMinutes>0?'text-[var(--orange)] font-bold':'text-[var(--muted)]'}">${a.overtimeMinutes?fmtDur(a.overtimeMinutes):'—'}</td>
+                <td class="text-xs" style="max-width:300px">
+                  ${a.location ? `
+                    <div class="mb-1"><span class="badge ${verify.badge}">IN: ${verify.message}</span></div>
+                    <div class="text-[var(--muted)] truncate" title="${a.location.label||''}">📍 ${a.location.label||`${a.location.lat?.toFixed(4)}, ${a.location.lng?.toFixed(4)}`}</div>
+                    ${mapLink ? `<a href="${mapLink}" target="_blank" class="text-[var(--orange)] hover:underline text-xs">View on Map →</a>` : ''}
+                  ` : '<span class="badge badge-red">No location</span>'}
+                  ${outVerify ? `
+                    <div class="mt-2 pt-2 border-t border-[var(--border)]">
+                      <div class="mb-1"><span class="badge ${outVerify.badge}">OUT: ${outVerify.message}</span></div>
+                      <div class="text-[var(--muted)] truncate" title="${a.checkOutLocation.label||''}">📍 ${a.checkOutLocation.label||''}</div>
+                      ${outMapLink ? `<a href="${outMapLink}" target="_blank" class="text-[var(--orange)] hover:underline text-xs">View on Map →</a>` : ''}
+                    </div>` : ''}
+                </td>
+                <td><span class="badge ${a.mode==='manual'?'badge-yellow':a.mode==='wfh'?'badge-blue':'badge-green'}">${a.mode||'office'}</span>${a.manualReason?`<div class="text-xs text-[var(--muted)] mt-1" title="${a.manualReason}">${a.manualReason.substring(0,25)}…</div>`:''}</td>
+              </tr>`}).join('')
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="mt-3 card">
+      <h4 class="font-bold mb-2 text-sm">📋 Verification Legend</h4>
+      <div class="grid md:grid-cols-3 gap-2 text-xs">
+        <div><span class="badge badge-green">✓ Verified</span> Within ${S.config.maxDistance}m of office</div>
+        <div><span class="badge badge-yellow">⚠ Outside Range</span> Up to ${S.config.maxDistance*4}m</div>
+        <div><span class="badge badge-red">❌ Suspicious</span> Very far / No location</div>
+      </div>
+      <div class="text-xs text-[var(--muted)] mt-2">Office: <span class="mono">${S.config.officeName}</span> · Max distance configurable in Settings</div>
+    </div>`;
+}
+
+function aEmpDtlYearly(e) {
+  const y = S.selYear;
+  return `
+    <div class="mb-4 flex justify-between items-end flex-wrap gap-2">
+      <h3 class="font-bold text-lg">Yearly Attendance Heatmap · ${y}</h3>
+      <select id="ySel" class="select" style="width:110px">${Array.from({length:5},(_,i)=>y-2+i).map(yr=>`<option value="${yr}" ${yr===y?'selected':''}>${yr}</option>`).join('')}</select>
+    </div>
+    ${renderYearlyHeatmap(e, y)}
+    <div class="mt-5 card">
+      <h3 class="font-bold mb-3">Year-wise Monthly Breakdown</h3>
+      <div class="overflow-x-auto">
+        <table>
+          <thead><tr><th>Month</th><th>Working Days</th><th>Present</th><th>Absent</th><th>Leaves</th><th>OT</th><th>Late</th><th>Net Salary (calc)</th></tr></thead>
+          <tbody>
+            ${Array.from({length:12}, (_,m) => {
+              const wd = workingDaysIn(y, m, S.holidays, S.config.workingDays >= 6 ? 1 : 2);
+              const monthAtt = S.attendance.filter(a => a.employeeId === e.id && a.date.startsWith(`${y}-${String(m+1).padStart(2,'0')}`));
+              const monthLv = S.leaves.filter(l => l.employeeId === e.id && l.status === 'approved' && l.fromDate.startsWith(`${y}-${String(m+1).padStart(2,'0')}`));
+              const lvDays = monthLv.reduce((s,l) => s + daysBetween(l.fromDate, l.toDate) * (l.halfDay?0.5:1), 0);
+              const totalOT = monthAtt.reduce((s,a) => s + (a.overtimeMinutes||0), 0);
+              const totalLate = monthAtt.reduce((s,a) => s + (a.lateMinutes||0), 0);
+              const p = calcPayroll(e, m, y);
+              const isFuture = new Date(y, m, 1) > new Date();
+              return `<tr class="${isFuture?'opacity-50':''}">
+                <td><span class="font-semibold">${shortMonth(m)}</span></td>
+                <td>${wd}</td>
+                <td class="text-[var(--green)] font-bold">${monthAtt.length}</td>
+                <td class="text-[var(--red)]">${Math.max(0, wd - monthAtt.length - lvDays)}</td>
+                <td class="text-[var(--yellow)]">${lvDays.toFixed(1)}</td>
+                <td class="mono text-[var(--orange)]">${fmtDur(totalOT)}</td>
+                <td class="mono text-[var(--red)]">${fmtDur(totalLate)}</td>
+                <td class="mono font-bold">${isFuture?'—':inr(p.netSalary)}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+function aEmpDtlLeaves(e) {
+  const myLeaves = S.leaves.filter(l => l.employeeId === e.id).slice().reverse();
+  return `
+    <div class="grid md:grid-cols-4 gap-3 mb-5">
+      ${S.leaveTypes.map(t => `<div class="stat-card">
+        <div class="text-xs text-[var(--muted)] mb-1">${t.name.toUpperCase()}</div>
+        <div class="stat-num text-[var(--${t.color === 'gray' ? 'muted' : t.color})]">${e.leaveBalance?.[t.id]??0}<span class="text-sm text-[var(--muted)]"> / ${t.annual}</span></div>
+        <div class="text-xs text-[var(--muted)]">days remaining</div>
+      </div>`).join('')}
+    </div>
+    <div class="card">
+      <h3 class="font-bold mb-3">Leave History (${myLeaves.length})</h3>
+      ${myLeaves.length===0 ? '<p class="text-sm text-[var(--muted)]">Koi leave request nahi.</p>' :
+        `<div class="space-y-2">${myLeaves.map(l => { const days = daysBetween(l.fromDate, l.toDate) * (l.halfDay?0.5:1); return `
+          <div class="p-3 rounded bg-[var(--panel-2)] flex justify-between items-center flex-wrap gap-2">
+            <div class="flex-1 min-w-[200px]">
+              <div class="flex items-center gap-2 mb-1">
+                <span class="badge badge-${S.leaveTypes.find(t=>t.id===l.type)?.color||'gray'}">${l.type}</span>
+                <span class="text-sm font-semibold">${fmtShortDate(l.fromDate)} → ${fmtShortDate(l.toDate)}</span>
+                <span class="text-xs text-[var(--muted)]">(${days}d${l.halfDay?' half':''})</span>
+              </div>
+              <div class="text-xs text-[var(--muted)]">${l.reason}</div>
+            </div>
+            <span class="badge ${l.status==='approved'?'badge-green':l.status==='rejected'?'badge-red':'badge-yellow'}">${l.status}</span>
+          </div>`; }).join('')}</div>`}
+    </div>`;
+}
+
+function aEmpDtlPayroll(e) {
+  const empPayroll = S.payroll.filter(p => p.employeeId === e.id).slice().reverse();
+  return `
+    <div class="mb-4 flex justify-between items-center flex-wrap gap-2">
+      <h3 class="font-bold text-lg">Payroll History (${empPayroll.length} records)</h3>
+      <button id="empProcessPay2" class="btn btn-primary">+ Process New Month</button>
+    </div>
+    ${empPayroll.length === 0 ? `<div class="card text-center text-[var(--muted)] py-10">
+      Abhi tak koi payroll process nahi hua.<br><span class="text-sm">"Process Salary" pe click karke current/past month ka payroll banayein.</span>
+    </div>` : `
+    <div class="card p-0 overflow-hidden">
+      <div class="overflow-x-auto">
+        <table>
+          <thead><tr><th>Period</th><th>Present / Working</th><th>OT</th><th>Earnings</th><th>Deductions</th><th>Net</th><th>Payment Status</th><th></th></tr></thead>
+          <tbody>
+            ${empPayroll.map(p => `<tr>
+              <td><span class="font-semibold">${monthName(p.month)} ${p.year}</span><div class="text-xs text-[var(--muted)]">Processed ${fmtShortDate(p.processedAt)}</div></td>
+              <td><span class="font-bold">${p.presentDays}</span><span class="text-[var(--muted)]"> / ${p.workingDays}</span></td>
+              <td class="mono text-sm text-[var(--orange)]">${fmtDur(p.totalOTMin||0)}</td>
+              <td class="mono text-sm text-[var(--green)]">${inr(p.earnings.total)}</td>
+              <td class="mono text-sm text-[var(--red)]">${inr(p.deductions.total)}</td>
+              <td class="mono font-bold">${inr(p.netSalary)}</td>
+              <td>${p.status==='paid' ? `<span class="badge badge-green">✓ PAID</span><div class="text-xs text-[var(--muted)] mt-1">${fmtShortDate(p.paidAt)} · ${p.paymentMode||'—'}${p.transactionId?`<br>TXN: ${p.transactionId.substring(0,10)}`:''}</div>` : '<span class="badge badge-yellow">Pending</span>'}</td>
+              <td class="whitespace-nowrap">
+                <button class="btn btn-ghost text-xs viewSlip2" data-pid="${p.id}">Slip</button>
+                ${p.status !== 'paid' ? `<button class="btn btn-success text-xs markPaid" data-pid="${p.id}">Mark Paid</button>` : ''}
+                <button class="btn btn-danger text-xs delPay" data-pid="${p.id}">×</button>
+              </td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>`}`;
+}
+
+function aEmpDtlReg(e) {
+  const regs = S.regularizations.filter(r => r.employeeId === e.id).slice().reverse();
+  return `
+    <h3 class="font-bold mb-3 text-lg">Regularization History (${regs.length})</h3>
+    ${regs.length===0 ? '<div class="card text-center text-[var(--muted)] py-10">Koi regularization request nahi.</div>' :
+      `<div class="space-y-2">${regs.map(r => `
+        <div class="card flex justify-between items-center flex-wrap gap-2">
+          <div>
+            <div class="font-semibold">${fmtDate(r.date)}</div>
+            <div class="text-xs text-[var(--muted)] mono mb-1">IN ${r.checkIn||'—'} · OUT ${r.checkOut||'—'}</div>
+            <div class="text-sm">${r.reason}</div>
+          </div>
+          <span class="badge ${r.status==='approved'?'badge-green':r.status==='rejected'?'badge-red':'badge-yellow'}">${r.status}</span>
+        </div>`).join('')}</div>`}`;
+}
+
+// ---------- ADMIN: ATTENDANCE (MONTHLY) ----------
+function aAttendance() {
+  const m = S.selMonth, y = S.selYear;
+  const days = new Date(y, m+1, 0).getDate();
+  const tdy = new Date(); const isCM = tdy.getMonth()===m && tdy.getFullYear()===y;
+  return `
+    <div class="mb-6 flex justify-between items-end flex-wrap gap-3">
+      <div><h1 class="text-3xl font-extrabold mb-1">Monthly Attendance</h1><p class="text-[var(--muted)]">Office ${S.config.officeIn}–${S.config.officeOut} · OT till ${S.config.overtimeCap}</p></div>
+      <div class="flex gap-2">
+        <select id="mSel" class="select" style="width:150px">${Array.from({length:12},(_,i)=>`<option value="${i}" ${i===m?'selected':''}>${monthName(i)}</option>`).join('')}</select>
+        <select id="ySel" class="select" style="width:110px">${Array.from({length:5},(_,i)=>y-2+i).map(yr=>`<option value="${yr}" ${yr===y?'selected':''}>${yr}</option>`).join('')}</select>
+        <button id="exportAtt" class="btn btn-ghost">⬇ CSV</button>
+      </div>
+    </div>
+    <div class="card p-0 overflow-hidden">
+      <div class="overflow-x-auto">
+        <table style="min-width:1000px">
+          <thead><tr>
+            <th class="sticky left-0 bg-[var(--panel)]" style="min-width:180px">Employee</th>
+            ${Array.from({length:days},(_,i)=>{ const d=new Date(y,m,i+1); const wknd=isWeekend(d); const hol=S.holidays.some(h=>h.date===`${y}-${String(m+1).padStart(2,'0')}-${String(i+1).padStart(2,'0')}`); return `<th class="text-center" style="min-width:34px; ${hol?'color:var(--purple)':(wknd?'color:var(--orange)':'')}">${i+1}</th>`; }).join('')}
+            <th>P</th><th>A</th><th>L</th><th>Late</th><th>OT</th>
+          </tr></thead>
+          <tbody>
+            ${S.employees.filter(e=>e.status==='active').map(e=>{
+              let p=0,a=0,l=0,tL=0,tO=0;
+              const cells = Array.from({length:days},(_,i)=>{
+                const day=i+1; const ds=`${y}-${String(m+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+                const d=new Date(y,m,day); const wknd=isWeekend(d); const fut=isCM && day>tdy.getDate();
+                const att=S.attendance.find(x=>x.employeeId===e.id && x.date===ds);
+                const lv=S.leaves.find(x=>x.employeeId===e.id && x.status==='approved' && inRange(ds,x.fromDate,x.toDate));
+                const hol=S.holidays.find(x=>x.date===ds);
+                let cls='weekend', t='·';
+                if (fut) { cls='future'; t=''; }
+                else if (att) { cls=att.mode==='wfh'?'wfh':'present'; t=att.mode==='wfh'?'W':'✓'; p++; tL+=(att.lateMinutes||0); tO+=(att.overtimeMinutes||0); }
+                else if (lv) { cls='leave'; t='L'; l++; }
+                else if (hol) { cls='holiday'; t='H'; }
+                else if (wknd) { cls='weekend'; t='·'; }
+                else { cls='absent'; t='✗'; a++; }
+                const ttl = att ? `${ds}\nIN ${att.checkIn}${att.checkOut?` OUT ${att.checkOut}`:''}` : (hol?`${hol.name}`:(lv?`${lv.type} leave`:ds));
+                return `<td style="padding:3px"><div class="grid-cell ${cls}" title="${ttl}">${t}</div></td>`;
+              }).join('');
+              return `<tr>
+                <td class="sticky left-0 bg-[var(--panel)]"><div class="flex items-center gap-2"><div class="avatar" style="width:30px;height:30px;font-size:11px;">${e.name[0]}</div><div><div class="font-semibold text-sm">${e.name}</div><div class="text-xs text-[var(--muted)]">${e.department}</div></div></div></td>
+                ${cells}
+                <td class="text-center font-bold text-[var(--green)]">${p}</td>
+                <td class="text-center font-bold text-[var(--red)]">${a}</td>
+                <td class="text-center font-bold text-[var(--yellow)]">${l}</td>
+                <td class="text-center font-bold text-[var(--red)] text-xs mono">${tL?fmtDur(tL):'—'}</td>
+                <td class="text-center font-bold text-[var(--orange)] text-xs mono">${tO?fmtDur(tO):'—'}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="mt-3 flex gap-5 text-xs text-[var(--muted)] flex-wrap">
+      <span class="flex items-center gap-2"><div class="w-3 h-3 rounded grid-cell present"></div>Present</span>
+      <span class="flex items-center gap-2"><div class="w-3 h-3 rounded grid-cell wfh"></div>WFH</span>
+      <span class="flex items-center gap-2"><div class="w-3 h-3 rounded grid-cell absent"></div>Absent</span>
+      <span class="flex items-center gap-2"><div class="w-3 h-3 rounded grid-cell leave"></div>Leave</span>
+      <span class="flex items-center gap-2"><div class="w-3 h-3 rounded grid-cell holiday"></div>Holiday</span>
+      <span class="flex items-center gap-2"><div class="w-3 h-3 rounded grid-cell weekend"></div>Weekend</span>
+    </div>`;
+}
+
+// ---------- ADMIN: YEARLY ----------
+function aYearly() {
+  const y = S.selYear;
+  return `
+    <div class="mb-6 flex justify-between items-end flex-wrap gap-3">
+      <div><h1 class="text-3xl font-extrabold mb-1">Yearly Heatmap · ${y}</h1><p class="text-[var(--muted)]">Har employee ka pura saal — green intensity = working hours, yellow = leave, purple = holiday</p></div>
+      <select id="ySel" class="select" style="width:120px">${Array.from({length:5},(_,i)=>y-2+i).map(yr=>`<option value="${yr}" ${yr===y?'selected':''}>${yr}</option>`).join('')}</select>
+    </div>
+    <div class="space-y-5">
+      ${S.employees.filter(e=>e.status==='active').map(e => renderYearlyHeatmap(e, y)).join('')}
+      ${S.employees.length===0 ? '<div class="card text-center text-[var(--muted)] py-12">Koi employee nahi.</div>':''}
+    </div>
+    <div class="mt-5 card">
+      <h3 class="font-bold mb-3">Legend</h3>
+      <div class="flex gap-6 flex-wrap text-xs">
+        <span class="flex items-center gap-2"><div class="yearly-cell y-3"></div> 8+ hours</span>
+        <span class="flex items-center gap-2"><div class="yearly-cell y-2"></div> 6-8 hours</span>
+        <span class="flex items-center gap-2"><div class="yearly-cell y-1"></div> &lt; 6 hours</span>
+        <span class="flex items-center gap-2"><div class="yearly-cell y-l"></div> Leave</span>
+        <span class="flex items-center gap-2"><div class="yearly-cell y-h"></div> Holiday</span>
+        <span class="flex items-center gap-2"><div class="yearly-cell y-a"></div> Absent</span>
+        <span class="flex items-center gap-2"><div class="yearly-cell y-w"></div> Weekend / Future</span>
+      </div>
+    </div>`;
+}
+
+function renderYearlyHeatmap(emp, year) {
+  // build day grid: 53 weeks x 7 days
+  const start = new Date(year, 0, 1);
+  const today = new Date();
+  let totalP=0, totalA=0, totalL=0, totalOT=0;
+  let cellsHTML = '';
+  // Build by months
+  let monthBlocks = [];
+  for (let m=0; m<12; m++) {
+    const daysInMonth = new Date(year, m+1, 0).getDate();
+    let mP=0;
+    let monthCells = '';
+    for (let d=1; d<=daysInMonth; d++) {
+      const ds = `${year}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      const dt = new Date(year, m, d);
+      const wknd = isWeekend(dt);
+      const fut = dt > today;
+      const att = S.attendance.find(a => a.employeeId === emp.id && a.date === ds);
+      const lv = S.leaves.find(l => l.employeeId === emp.id && l.status === 'approved' && inRange(ds, l.fromDate, l.toDate));
+      const hol = S.holidays.find(h => h.date === ds);
+      let cls = 'y-w';
+      let ttl = ds;
+      if (fut) cls = 'y-w';
+      else if (att) {
+        const hrs = (att.workedMinutes||0) / 60;
+        cls = hrs >= 8 ? 'y-3' : hrs >= 6 ? 'y-2' : 'y-1';
+        ttl = `${ds} · ${fmtDur(att.workedMinutes||0)}`;
+        totalP++; mP++; totalOT += (att.overtimeMinutes||0);
+      }
+      else if (lv) { cls='y-l'; ttl = `${ds} · ${lv.type} leave`; totalL++; }
+      else if (hol) { cls='y-h'; ttl = `${ds} · ${hol.name}`; }
+      else if (wknd) cls = 'y-w';
+      else { cls = 'y-a'; totalA++; ttl = `${ds} · Absent`; }
+      monthCells += `<div class="yearly-cell ${cls}" title="${ttl}"></div>`;
+    }
+    monthBlocks.push(`<div class="flex-shrink-0">
+      <div class="text-xs text-[var(--muted)] mb-2 mono">${shortMonth(m)} <span class="text-[var(--green)]">${mP}</span></div>
+      <div class="grid gap-1" style="grid-template-columns:repeat(7, 14px); width:fit-content">${monthCells}</div>
+    </div>`);
+  }
+  return `
+    <div class="card">
+      <div class="flex justify-between items-start mb-4 flex-wrap gap-3">
+        <div class="flex items-center gap-3">
+          <div class="avatar">${emp.name[0]}</div>
+          <div><div class="font-bold">${emp.name}</div><div class="text-xs text-[var(--muted)]">${emp.department} · ${emp.employeeCode||'—'}</div></div>
+        </div>
+        <div class="flex gap-4 text-sm">
+          <div><span class="text-[var(--muted)]">Present:</span> <span class="font-bold text-[var(--green)]">${totalP}</span></div>
+          <div><span class="text-[var(--muted)]">Absent:</span> <span class="font-bold text-[var(--red)]">${totalA}</span></div>
+          <div><span class="text-[var(--muted)]">Leaves:</span> <span class="font-bold text-[var(--yellow)]">${totalL}</span></div>
+          <div><span class="text-[var(--muted)]">OT:</span> <span class="font-bold text-[var(--orange)]">${fmtDur(totalOT)}</span></div>
+        </div>
+      </div>
+      <div class="overflow-x-auto">
+        <div class="flex gap-3" style="min-width:fit-content;">${monthBlocks.join('')}</div>
+      </div>
+    </div>`;
+}
+
+// ---------- ADMIN: PAYROLL ----------
+function aPayroll() {
+  const m = S.selMonth, y = S.selYear;
+  // Calculate payroll for each employee
+  const rows = S.employees.filter(e=>e.status==='active').map(e => {
+    const calc = calcPayroll(e, m, y);
+    const processed = S.payroll.find(p => p.employeeId === e.id && p.month === m && p.year === y);
+    return { ...calc, processed };
+  });
+  const totalPayout = rows.reduce((s,r) => s + r.netSalary, 0);
+  const paidCount = rows.filter(r => r.processed?.status === 'paid').length;
+  const processedCount = rows.filter(r => r.processed).length;
+  return `
+    <div class="mb-6 flex justify-between items-end flex-wrap gap-3">
+      <div><h1 class="text-3xl font-extrabold mb-1">Payroll · ${monthName(m)} ${y}</h1><p class="text-[var(--muted)]">${processedCount}/${rows.length} processed · ${paidCount}/${rows.length} paid · Working days: ${rows[0]?.workingDays || 0}</p></div>
+      <div class="flex gap-2 flex-wrap">
+        <select id="mSel" class="select" style="width:150px">${Array.from({length:12},(_,i)=>`<option value="${i}" ${i===m?'selected':''}>${monthName(i)}</option>`).join('')}</select>
+        <select id="ySel" class="select" style="width:110px">${Array.from({length:5},(_,i)=>y-2+i).map(yr=>`<option value="${yr}" ${yr===y?'selected':''}>${yr}</option>`).join('')}</select>
+        <button id="processAllPay" class="btn btn-ghost">⚡ Process All</button>
+        <button id="payrollCSV" class="btn btn-ghost">⬇ CSV</button>
+      </div>
+    </div>
+    <div class="grid md:grid-cols-3 gap-4 mb-5">
+      <div class="stat-card" style="background:linear-gradient(135deg, rgba(255,106,0,.1), rgba(255,140,51,.05));">
+        <div class="text-xs text-[var(--muted)] mb-1">TOTAL PAYOUT</div>
+        <div class="stat-num gradient-text">${inr(totalPayout)}</div>
+      </div>
+      <div class="stat-card">
+        <div class="text-xs text-[var(--muted)] mb-1">PROCESSED</div>
+        <div class="stat-num text-[var(--blue)]">${processedCount}<span class="text-base text-[var(--muted)]"> / ${rows.length}</span></div>
+      </div>
+      <div class="stat-card">
+        <div class="text-xs text-[var(--muted)] mb-1">PAID</div>
+        <div class="stat-num text-[var(--green)]">${paidCount}<span class="text-base text-[var(--muted)]"> / ${rows.length}</span></div>
+      </div>
+    </div>
+    <div class="card p-0 overflow-hidden">
+      <div class="overflow-x-auto">
+        <table>
+          <thead><tr><th>Employee</th><th>Present/Working</th><th>OT</th><th>LOP</th><th>Earnings</th><th>Deductions</th><th>Net</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody>
+            ${rows.length===0 ? '<tr><td colspan="9" class="text-center text-[var(--muted)] py-8">Koi employee nahi.</td></tr>' :
+              rows.map(r => `<tr>
+                <td><div class="flex items-center gap-2 cursor-pointer openEmp" data-id="${r.emp.id}"><div class="avatar" style="width:32px;height:32px;font-size:12px">${r.emp.name[0]}</div><div><div class="font-semibold text-sm">${r.emp.name}</div><div class="text-xs text-[var(--muted)]">${r.emp.department}</div></div></div></td>
+                <td><span class="font-semibold">${r.presentDays}</span><span class="text-[var(--muted)]"> / ${r.workingDays}</span></td>
+                <td class="mono text-sm text-[var(--orange)]">${r.totalOTMin ? fmtDur(r.totalOTMin) : '—'}</td>
+                <td class="mono text-sm text-[var(--red)]">${r.lopDays > 0 ? r.lopDays.toFixed(1) + 'd' : '—'}</td>
+                <td class="mono text-sm text-[var(--green)]">${inr(r.earnings.total)}</td>
+                <td class="mono text-sm text-[var(--red)]">${inr(r.deductions.total)}</td>
+                <td class="mono font-bold">${inr(r.netSalary)}</td>
+                <td>${!r.processed ? '<span class="badge badge-gray">Not Processed</span>' : r.processed.status === 'paid' ? `<span class="badge badge-green">✓ PAID</span>` : '<span class="badge badge-yellow">Pending Pay</span>'}</td>
+                <td class="whitespace-nowrap">
+                  ${!r.processed ? `<button class="btn btn-primary text-xs processPay" data-emp="${r.emp.id}" data-m="${m}" data-y="${y}">Process</button>` :
+                    r.processed.status !== 'paid' ? `<button class="btn btn-success text-xs markPaid" data-pid="${r.processed.id}">Mark Paid</button>` : ''}
+                  <button class="btn btn-ghost text-xs viewSlip" data-emp="${r.emp.id}" data-m="${m}" data-y="${y}">Slip</button>
+                </td>
+              </tr>`).join('')
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="mt-4 card">
+      <h3 class="font-bold mb-2 text-sm">💡 Workflow</h3>
+      <div class="text-sm text-[var(--muted)]"><span class="text-[var(--orange)] font-semibold">Process</span> → calculates salary based on attendance/OT/leaves → <span class="text-[var(--yellow)] font-semibold">Mark Paid</span> → adds payment details (mode, date, txn ID) → <span class="text-[var(--green)] font-semibold">Employee gets notification + payslip in their panel</span></div>
+    </div>`;
+}
+
+function calcPayroll(emp, month, year) {
+  const sal = emp.salary || { basic:0, hra:0, allowances:0, total:0 };
+  const workingDays = workingDaysIn(year, month, S.holidays, S.config.workingDays >= 6 ? 1 : 2);
+  const perDay = workingDays > 0 ? sal.total / workingDays : 0;
+  const perHour = (sal.total / workingDays) / 8;
+
+  const monthAtt = S.attendance.filter(a => a.employeeId === emp.id && a.date.startsWith(`${year}-${String(month+1).padStart(2,'0')}`));
+  const monthLeaves = S.leaves.filter(l => l.employeeId === emp.id && l.status === 'approved' && (l.fromDate.startsWith(`${year}-${String(month+1).padStart(2,'0')}`) || l.toDate.startsWith(`${year}-${String(month+1).padStart(2,'0')}`)));
+  
+  const presentDays = monthAtt.length;
+  const totalLateMin = monthAtt.reduce((s,a) => s + (a.lateMinutes||0), 0);
+  const totalOTMin = monthAtt.reduce((s,a) => s + (a.overtimeMinutes||0), 0);
+
+  // Calculate leave days (split into paid/unpaid)
+  let paidLeaveDays = 0, lopDays = 0;
+  monthLeaves.forEach(l => {
+    const days = daysBetween(l.fromDate, l.toDate) * (l.halfDay ? 0.5 : 1);
+    const ltype = S.leaveTypes.find(t => t.id === l.type);
+    if (ltype && ltype.paid) paidLeaveDays += days; else lopDays += days;
+  });
+
+  // Loss of pay deduction
+  const lopDeduction = Math.round(perDay * lopDays);
+  // Late deduction: if total late > 30 min in month, deduct (after grace, configurable)
+  const lateDeduction = totalLateMin > 60 ? Math.round((totalLateMin/60) * perHour * 0.5) : 0;
+  // OT bonus
+  const otBonus = Math.round((totalOTMin/60) * perHour * (S.config.otRate || 1.5));
+  // PF deduction (12% of basic, simplified)
+  const pf = Math.round(sal.basic * 0.12);
+
+  const earnings = {
+    basic: sal.basic, hra: sal.hra, allowances: sal.allowances, otBonus,
+    total: sal.basic + sal.hra + sal.allowances + otBonus
+  };
+  const deductions = {
+    pf, lop: lopDeduction, late: lateDeduction,
+    total: pf + lopDeduction + lateDeduction
+  };
+  const netSalary = earnings.total - deductions.total;
+
+  return { emp, month, year, workingDays, presentDays, paidLeaveDays, lopDays, totalLateMin, totalOTMin, earnings, deductions, netSalary };
+}
+
+// ---------- ADMIN: LEAVES ----------
+function aLeaves() {
+  const pending = S.leaves.filter(l => l.status === 'pending');
+  const processed = S.leaves.filter(l => l.status !== 'pending').slice().reverse();
+  return `
+    <div class="mb-6 flex justify-between items-end">
+      <div><h1 class="text-3xl font-extrabold mb-1">Leave Management</h1><p class="text-[var(--muted)]">${pending.length} pending · ${processed.length} processed</p></div>
+      <button id="cfgLtypes" class="btn btn-ghost">⚙ Configure Leave Types</button>
+    </div>
+    <div class="grid md:grid-cols-4 gap-3 mb-5">
+      ${S.leaveTypes.map(t => `<div class="stat-card">
+        <div class="text-xs text-[var(--muted)] mb-2">${t.name.toUpperCase()}</div>
+        <div class="stat-num text-[var(--${t.color === 'gray' ? 'muted' : t.color})]">${t.annual}</div>
+        <div class="text-xs text-[var(--muted)] mt-1">days / year ${t.paid ? '(paid)' : '(unpaid)'}</div>
+      </div>`).join('')}
+    </div>
+    <div class="card mb-5">
+      <h3 class="font-bold mb-4">Pending Requests (${pending.length})</h3>
+      ${pending.length===0 ? '<p class="text-sm text-[var(--muted)]">Koi pending request nahi.</p>' :
+        `<div class="space-y-3">${pending.map(l => { const e=S.employees.find(x=>x.id===l.employeeId); const days = daysBetween(l.fromDate, l.toDate) * (l.halfDay?0.5:1); return `
+          <div class="p-4 rounded-lg bg-[var(--panel-2)] flex justify-between items-center gap-4 flex-wrap">
+            <div class="flex items-center gap-3 flex-1 min-w-[240px]">
+              <div class="avatar">${e?.name?.[0] || '?'}</div>
+              <div class="flex-1">
+                <div class="font-semibold">${e?.name||'?'}</div>
+                <div class="text-xs text-[var(--muted)] mb-1">${fmtDate(l.fromDate)} → ${fmtDate(l.toDate)} · ${days} day${days!==1?'s':''} ${l.halfDay?'(half)':''} · <span class="badge badge-${S.leaveTypes.find(t=>t.id===l.type)?.color||'gray'}">${l.type}</span></div>
+                <div class="text-sm">${l.reason}</div>
+              </div>
+            </div>
+            <div class="flex gap-2">
+              <button class="btn btn-success approveLv" data-id="${l.id}">✓ Approve</button>
+              <button class="btn btn-danger rejectLv" data-id="${l.id}">✗ Reject</button>
+            </div>
+          </div>`; }).join('')}</div>`}
+    </div>
+    <div class="card">
+      <h3 class="font-bold mb-4">Processed (${processed.length})</h3>
+      ${processed.length===0 ? '<p class="text-sm text-[var(--muted)]">Koi processed leave nahi.</p>' :
+        `<div class="space-y-2 max-h-96 overflow-y-auto">${processed.map(l => { const e=S.employees.find(x=>x.id===l.employeeId); return `
+          <div class="p-3 rounded-lg bg-[var(--panel-2)] flex justify-between items-center">
+            <div><div class="text-sm font-semibold">${e?.name||'?'}</div><div class="text-xs text-[var(--muted)]">${fmtDate(l.fromDate)} → ${fmtDate(l.toDate)} · ${l.type}</div></div>
+            <span class="badge ${l.status==='approved'?'badge-green':'badge-red'}">${l.status}</span>
+          </div>`; }).join('')}</div>`}
+    </div>`;
+}
+
+// ---------- ADMIN: REGULARIZATION ----------
+function aRegularization() {
+  const pending = S.regularizations.filter(r => r.status === 'pending');
+  const processed = S.regularizations.filter(r => r.status !== 'pending').slice().reverse();
+  return `
+    <div class="mb-6">
+      <h1 class="text-3xl font-extrabold mb-1">Attendance Regularization</h1>
+      <p class="text-[var(--muted)]">Employees ne forgot to scan — manual approval requests. ${pending.length} pending.</p>
+    </div>
+    <div class="card mb-5">
+      <h3 class="font-bold mb-4">Pending (${pending.length})</h3>
+      ${pending.length===0 ? '<p class="text-sm text-[var(--muted)]">Koi pending regularization nahi.</p>' :
+        `<div class="space-y-3">${pending.map(r => { const e=S.employees.find(x=>x.id===r.employeeId); return `
+          <div class="p-4 rounded-lg bg-[var(--panel-2)] flex justify-between items-center gap-4 flex-wrap">
+            <div class="flex items-center gap-3 flex-1 min-w-[240px]">
+              <div class="avatar">${e?.name?.[0]||'?'}</div>
+              <div>
+                <div class="font-semibold">${e?.name||'?'} · ${fmtDate(r.date)}</div>
+                <div class="text-xs text-[var(--muted)] mono mb-1">IN ${r.checkIn || '—'} · OUT ${r.checkOut || '—'}</div>
+                <div class="text-sm">${r.reason}</div>
+              </div>
+            </div>
+            <div class="flex gap-2">
+              <button class="btn btn-success approveReg" data-id="${r.id}">✓ Approve</button>
+              <button class="btn btn-danger rejectReg" data-id="${r.id}">✗ Reject</button>
+            </div>
+          </div>`; }).join('')}</div>`}
+    </div>
+    <div class="card">
+      <h3 class="font-bold mb-4">Processed (${processed.length})</h3>
+      ${processed.length===0 ? '<p class="text-sm text-[var(--muted)]">Koi processed regularization nahi.</p>' :
+        `<div class="space-y-2 max-h-96 overflow-y-auto">${processed.map(r => { const e=S.employees.find(x=>x.id===r.employeeId); return `
+          <div class="p-3 rounded-lg bg-[var(--panel-2)] flex justify-between items-center">
+            <div><div class="text-sm font-semibold">${e?.name||'?'} · ${fmtDate(r.date)}</div><div class="text-xs text-[var(--muted)]">${r.reason}</div></div>
+            <span class="badge ${r.status==='approved'?'badge-green':'badge-red'}">${r.status}</span>
+          </div>`; }).join('')}</div>`}
+    </div>`;
+}
+
+// ---------- ADMIN: HOLIDAYS ----------
+function aHolidays() {
+  const y = S.selYear;
+  const yearHolidays = S.holidays.filter(h => h.date.startsWith(y.toString())).sort((a,b) => a.date.localeCompare(b.date));
+  return `
+    <div class="mb-6 flex justify-between items-end flex-wrap gap-3">
+      <div><h1 class="text-3xl font-extrabold mb-1">Holiday Calendar · ${y}</h1><p class="text-[var(--muted)]">${yearHolidays.length} holidays declared for ${y}</p></div>
+      <div class="flex gap-2">
+        <select id="ySel" class="select" style="width:110px">${Array.from({length:5},(_,i)=>y-2+i).map(yr=>`<option value="${yr}" ${yr===y?'selected':''}>${yr}</option>`).join('')}</select>
+        <button id="addHoliday" class="btn btn-primary">+ Add Holiday</button>
+      </div>
+    </div>
+    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+      ${yearHolidays.length===0 ? '<div class="card col-span-3 text-center text-[var(--muted)] py-10">Is year koi holiday declare nahi hua.</div>' :
+        yearHolidays.map(h => { const past = h.date < today(); return `
+        <div class="card hover-lift ${past?'opacity-60':''}">
+          <div class="flex justify-between items-start mb-3">
+            <div class="text-3xl">${h.type==='national'?'🇮🇳':h.type==='festival'?'🎉':'🏢'}</div>
+            <button class="btn btn-danger text-xs delHol" data-id="${h.id}">×</button>
+          </div>
+          <h3 class="font-bold text-lg mb-1">${h.name}</h3>
+          <div class="text-sm text-[var(--muted)] mb-2">${fmtDate(h.date)} · ${new Date(h.date).toLocaleDateString('en-IN',{weekday:'long'})}</div>
+          <span class="badge badge-purple">${h.type}</span>
+          ${past?'<span class="badge badge-gray ml-1">past</span>':''}
+        </div>`; }).join('')
+      }
+    </div>`;
+}
+
+// ---------- ADMIN: NOTICES ----------
+function aNotices() {
+  return `
+    <div class="mb-6 flex justify-between items-end">
+      <div><h1 class="text-3xl font-extrabold mb-1">Notices & Announcements</h1><p class="text-[var(--muted)]">Sab employees ko show hota hai dashboard pe</p></div>
+      <button id="addNotice" class="btn btn-primary">+ Post Notice</button>
+    </div>
+    ${S.notices.length===0 ? '<div class="card text-center text-[var(--muted)] py-12">Koi notice nahi. Pehla notice post karein.</div>' :
+      `<div class="space-y-4">${S.notices.slice().reverse().map(n => `
+        <div class="card hover-lift">
+          <div class="flex justify-between items-start mb-3">
+            <div class="flex items-center gap-2">
+              <span class="badge badge-${n.priority==='high'?'red':n.priority==='medium'?'yellow':'blue'}">${n.priority||'normal'}</span>
+              <h3 class="font-bold text-lg">${n.title}</h3>
+            </div>
+            <div class="flex gap-1">
+              <button class="btn btn-danger text-xs delNotice" data-id="${n.id}">×</button>
+            </div>
+          </div>
+          <p class="text-sm text-[var(--muted)] mb-3">${n.body.replace(/\n/g,'<br>')}</p>
+          <div class="text-xs text-[var(--muted)] mono">Posted ${fmtDateTime(n.postedAt)} by ${n.postedBy}</div>
+        </div>`).join('')}</div>`
+    }`;
+}
+
+// ---------- ADMIN: REPORTS ----------
+function aReports() {
+  return `
+    <div class="mb-6"><h1 class="text-3xl font-extrabold mb-1">Reports & Analytics</h1><p class="text-[var(--muted)]">Workforce insights, attendance patterns, OT trends</p></div>
+    <div class="grid lg:grid-cols-2 gap-5 mb-5">
+      <div class="card"><h3 class="font-bold mb-3">Monthly Attendance Trend (Last 6 Months)</h3><canvas id="monthlyTrend" style="max-height:280px"></canvas></div>
+      <div class="card"><h3 class="font-bold mb-3">Overtime Distribution by Department</h3><canvas id="otDept" style="max-height:280px"></canvas></div>
+    </div>
+    <div class="grid lg:grid-cols-2 gap-5 mb-5">
+      <div class="card"><h3 class="font-bold mb-3">Late Arrivals — Top 5 Employees (This Month)</h3><canvas id="lateChart" style="max-height:280px"></canvas></div>
+      <div class="card"><h3 class="font-bold mb-3">Leave Type Distribution</h3><canvas id="leaveTypeChart" style="max-height:280px"></canvas></div>
+    </div>
+    <div class="card">
+      <h3 class="font-bold mb-3">Quick Export</h3>
+      <div class="flex gap-3 flex-wrap">
+        <button id="expEmp" class="btn btn-ghost">⬇ All Employees</button>
+        <button id="expAtt" class="btn btn-ghost">⬇ All Attendance</button>
+        <button id="expLv" class="btn btn-ghost">⬇ All Leaves</button>
+        <button id="expPay" class="btn btn-ghost">⬇ Current Month Payroll</button>
+      </div>
+    </div>`;
+}
+
+function drawReports() {
+  const ym = new Date().getFullYear() + '-' + String(new Date().getMonth()+1).padStart(2,'0');
+  
+  // Monthly trend (last 6 months)
+  const mt = document.getElementById('monthlyTrend');
+  if (mt) {
+    const labels=[], pres=[], lates=[];
+    for (let i=5; i>=0; i--) {
+      const d = new Date(); d.setMonth(d.getMonth()-i);
+      const ym = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+      labels.push(shortMonth(d.getMonth()));
+      const monthAtt = S.attendance.filter(a => a.date.startsWith(ym));
+      pres.push(monthAtt.length);
+      lates.push(monthAtt.filter(a => a.lateMinutes>0).length);
+    }
+    new Chart(mt, { type:'line', data:{ labels, datasets:[
+      { label:'Total Present', data:pres, borderColor:'#10b981', backgroundColor:'rgba(16,185,129,.1)', tension:.3, fill:true },
+      { label:'Late Arrivals', data:lates, borderColor:'#ef4444', backgroundColor:'rgba(239,68,68,.1)', tension:.3, fill:true }
+    ]}, options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{labels:{color:'#8a8a93'}}}, scales:{x:{ticks:{color:'#8a8a93'},grid:{display:false}},y:{ticks:{color:'#8a8a93'},grid:{color:'#26262d'}}}}});
+  }
+  
+  // OT by department
+  const otD = document.getElementById('otDept');
+  if (otD) {
+    const deptOT = {};
+    S.attendance.filter(a => a.date.startsWith(ym)).forEach(a => {
+      const e = S.employees.find(x => x.id === a.employeeId);
+      if (e) { deptOT[e.department] = (deptOT[e.department]||0) + (a.overtimeMinutes||0); }
+    });
+    new Chart(otD, { type:'bar', data:{ labels:Object.keys(deptOT), datasets:[{ label:'OT Minutes', data:Object.values(deptOT), backgroundColor:'rgba(255,106,0,.7)', borderRadius:6 }]},
+      options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{x:{ticks:{color:'#8a8a93'},grid:{display:false}},y:{ticks:{color:'#8a8a93'},grid:{color:'#26262d'}}}}});
+  }
+  
+  // Late chart
+  const lc = document.getElementById('lateChart');
+  if (lc) {
+    const empLate = {};
+    S.attendance.filter(a => a.date.startsWith(ym) && a.lateMinutes>0).forEach(a => {
+      empLate[a.employeeId] = (empLate[a.employeeId]||0) + a.lateMinutes;
+    });
+    const top5 = Object.entries(empLate).sort((a,b)=>b[1]-a[1]).slice(0,5);
+    const labels = top5.map(([id]) => S.employees.find(e=>e.id===id)?.name?.split(' ')[0] || '?');
+    const data = top5.map(([,m]) => m);
+    new Chart(lc, { type:'bar', data:{ labels, datasets:[{ label:'Late Minutes', data, backgroundColor:'rgba(239,68,68,.7)', borderRadius:6 }]},
+      options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{x:{ticks:{color:'#8a8a93'},grid:{color:'#26262d'}},y:{ticks:{color:'#8a8a93'},grid:{display:false}}}}});
+  }
+  
+  // Leave type pie
+  const lt = document.getElementById('leaveTypeChart');
+  if (lt) {
+    const counts = {};
+    S.leaves.filter(l => l.status==='approved').forEach(l => { counts[l.type] = (counts[l.type]||0) + 1; });
+    if (Object.keys(counts).length === 0) counts['No data'] = 1;
+    new Chart(lt, { type:'doughnut', data:{ labels:Object.keys(counts), datasets:[{ data:Object.values(counts), backgroundColor:['#f59e0b','#ef4444','#10b981','#8a8a93'], borderColor:'#131316', borderWidth:2 }]},
+      options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{labels:{color:'#8a8a93'}}} } });
+  }
+}
+
+// ---------- ADMIN: SETTINGS ----------
+function aSettings() {
+  const c = S.config;
+  return `
+    <div class="mb-6"><h1 class="text-3xl font-extrabold mb-1">Office Settings</h1><p class="text-[var(--muted)]">Working hours, overtime, leave types, location verification — sab yahan se control</p></div>
+    <div class="grid md:grid-cols-2 gap-5 mb-5">
+      <div class="card">
+        <h3 class="font-bold mb-4">📍 Office Location (Anti-Fake Scan)</h3>
+        <div class="space-y-3">
+          <div><label class="label">Office Name</label><input id="cOName" class="input" value="${c.officeName||''}"></div>
+          <div class="grid grid-cols-2 gap-3">
+            <div><label class="label">Latitude</label><input id="cOLat" type="number" step="0.000001" class="input" value="${c.officeLat||''}"></div>
+            <div><label class="label">Longitude</label><input id="cOLng" type="number" step="0.000001" class="input" value="${c.officeLng||''}"></div>
+          </div>
+          <div><label class="label">Max Distance from Office (meters)</label><input id="cMaxDist" type="number" class="input" value="${c.maxDistance||500}"><p class="text-xs text-[var(--muted)] mt-1">Iske bahar scan = suspicious flag</p></div>
+          <button id="useCurrentLoc" class="btn btn-ghost w-full justify-center">📍 Use My Current Location</button>
+          <button id="saveOffice" class="btn btn-primary w-full justify-center">Save Office Location</button>
+          <div id="officeMsg" class="text-sm text-center"></div>
+          ${c.officeLat ? `<div class="p-3 rounded-lg bg-[var(--panel-2)] text-xs"><div class="text-[var(--muted)]">Current office set:</div><div class="mono">${c.officeLat}, ${c.officeLng}</div><a href="https://www.openstreetmap.org/?mlat=${c.officeLat}&mlon=${c.officeLng}&zoom=17" target="_blank" class="text-[var(--orange)]">View on map →</a></div>`:''}
+        </div>
+      </div>
+      <div class="card">
+        <h3 class="font-bold mb-4">⏰ Working Hours</h3>
+        <div class="space-y-3">
+          <div><label class="label">Office Check-In Time</label><input id="cIn" type="time" class="input" value="${c.officeIn}"><p class="text-xs text-[var(--muted)] mt-1">Iske baad = Late</p></div>
+          <div><label class="label">Office End Time</label><input id="cOut" type="time" class="input" value="${c.officeOut}"><p class="text-xs text-[var(--muted)] mt-1">Iske baad = Overtime starts</p></div>
+          <div><label class="label">Overtime Cap (No Count After)</label><input id="cCap" type="time" class="input" value="${c.overtimeCap}"><p class="text-xs text-[var(--muted)] mt-1">Cap ke baad ka time NOT counted</p></div>
+          <div><label class="label">Grace Period (Minutes)</label><input id="cGrace" type="number" min="0" max="60" class="input" value="${c.gracePeriod}"></div>
+          <div><label class="label">Working Days per Week</label><select id="cWD" class="select"><option value="5" ${c.workingDays===5?'selected':''}>5 days (Mon-Fri)</option><option value="6" ${c.workingDays===6?'selected':''}>6 days (Mon-Sat)</option></select></div>
+          <div><label class="label">OT Rate Multiplier</label><input id="cOTR" type="number" step="0.1" class="input" value="${c.otRate}"><p class="text-xs text-[var(--muted)] mt-1">Hourly rate × this = OT pay</p></div>
+          <button id="saveCfg" class="btn btn-primary w-full justify-center mt-2">Save Working Hours</button>
+          <div id="cfgMsg" class="text-sm text-center"></div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <h3 class="font-bold mb-4">Current Rules Summary</h3>
+      <div class="grid md:grid-cols-2 gap-3">
+        <div class="p-3 rounded-lg bg-[var(--panel-2)]">
+          <div class="flex justify-between mb-1"><span class="text-sm font-semibold">Standard Hours</span><span class="badge badge-green">${c.officeIn}–${c.officeOut}</span></div>
+          <div class="text-xs text-[var(--muted)] mono">${fmtDur(timeToMin(c.officeOut)-timeToMin(c.officeIn))} per day · ${c.workingDays} days/week</div>
+        </div>
+        <div class="p-3 rounded-lg bg-[var(--panel-2)]">
+          <div class="flex justify-between mb-1"><span class="text-sm font-semibold">Overtime Window</span><span class="badge badge-orange">${c.officeOut}–${c.overtimeCap}</span></div>
+          <div class="text-xs text-[var(--muted)] mono">Max ${fmtDur(timeToMin(c.overtimeCap)-timeToMin(c.officeOut))} OT · ${c.otRate}× rate</div>
+        </div>
+        <div class="p-3 rounded-lg bg-[var(--panel-2)]">
+          <div class="flex justify-between mb-1"><span class="text-sm font-semibold">Grace Period</span><span class="badge badge-blue">${c.gracePeriod} min</span></div>
+          <div class="text-xs text-[var(--muted)]">Itne min late tak ON-TIME hi count hoga</div>
+        </div>
+        <div class="p-3 rounded-lg bg-[var(--panel-2)]">
+          <div class="flex justify-between mb-1"><span class="text-sm font-semibold">Location Verify</span><span class="badge badge-purple">${c.maxDistance}m radius</span></div>
+          <div class="text-xs text-[var(--muted)]">Office se itne meter ke andar scan = verified</div>
+        </div>
+      </div>
+    </div>`;
+}
+
+// ==================== EMPLOYEE PANEL ====================
+function vEmp() {
+  const tabs = [
+    ['dashboard','Dashboard'],
+    ['scan','Scan'],
+    ['attendance','My Attendance'],
+    ['yearly','Yearly View'],
+    ['leave','Leaves'],
+    ['regularization','Regularize'],
+    ['payslip','Payslip'],
+    ['profile','Profile'],
+    ['notices','Notices'],
+  ];
+  const e = S.user;
+  return `<div class="min-h-screen">
+    <header class="border-b border-[var(--border)] bg-[var(--panel)] px-6 py-3 flex justify-between items-center flex-wrap gap-3 sticky top-0 z-10">
+      <div class="flex items-center gap-3">
+        <div class="avatar">${e.name[0]}</div>
+        <div><div class="font-bold text-sm">${e.name}</div><div class="text-xs text-[var(--muted)]">${e.department} · ${e.employeeCode||'—'}</div></div>
+      </div>
+      <div class="flex items-center gap-1 flex-wrap">
+        ${tabs.map(([id,lbl]) => `<button class="btn ${S.empTab===id?'btn-primary':'btn-ghost'} text-xs empTab" data-tab="${id}">${lbl}</button>`).join('')}
+        <button id="eLogout" class="btn btn-ghost text-xs">Logout</button>
+      </div>
+    </header>
+    <main class="p-6 max-w-7xl mx-auto">${eRoute()}</main>
+    ${S.modal ? vModal() : ''}
+  </div>`;
+}
+
+function eRoute() {
+  switch(S.empTab) {
+    case 'dashboard': return eDashboard();
+    case 'scan': return eScan();
+    case 'attendance': return eAttendance();
+    case 'yearly': return eYearly();
+    case 'leave': return eLeave();
+    case 'regularization': return eRegularize();
+    case 'payslip': return ePayslip();
+    case 'profile': return eProfile();
+    case 'notices': return eNotices();
+  }
+  return '';
+}
+
+function eDashboard() {
+  const e = S.user; const t = today();
+  const todayAtt = S.attendance.find(a => a.employeeId===e.id && a.date===t);
+  const myAtt = S.attendance.filter(a => a.employeeId===e.id);
+  const monthAtt = myAtt.filter(a => a.date.startsWith(t.substring(0,7)));
+  const monthOT = monthAtt.reduce((s,a) => s + (a.overtimeMinutes||0), 0);
+  const myLeaves = S.leaves.filter(l => l.employeeId===e.id);
+  const myNotices = S.notices.filter(n => !n.forEmployeeId || n.forEmployeeId === e.id).slice().reverse().slice(0,3);
+  return `
+    <div class="mb-6"><h1 class="text-3xl font-extrabold mb-1">Hello, ${e.name.split(' ')[0]} 👋</h1><p class="text-[var(--muted)]">${new Date().toLocaleDateString('en-IN',{weekday:'long',day:'2-digit',month:'long'})} · Office ${S.config.officeIn}–${S.config.officeOut}</p></div>
+    <div class="grid md:grid-cols-4 gap-3 mb-5">
+      <div class="stat-card"><div class="text-xs text-[var(--muted)] mb-1">TODAY</div>${todayAtt?`<div class="stat-num text-[var(--green)]">${todayAtt.checkOut?'Done':'In'}</div><div class="text-xs mono mt-1">IN ${todayAtt.checkIn}${todayAtt.checkOut?` · OUT ${todayAtt.checkOut}`:''}</div>${todayAtt.lateMinutes?'<span class="badge badge-red">LATE</span>':''}${todayAtt.overtimeMinutes?'<span class="badge badge-orange">OT</span>':''}`:`<div class="stat-num text-[var(--yellow)]">Not Yet</div><div class="text-xs text-[var(--muted)] mt-1">Scan to check in</div>`}</div>
+      <div class="stat-card"><div class="text-xs text-[var(--muted)] mb-1">THIS MONTH</div><div class="stat-num gradient-text">${monthAtt.length}</div><div class="text-xs text-[var(--muted)] mt-1">present days</div></div>
+      <div class="stat-card"><div class="text-xs text-[var(--muted)] mb-1">OVERTIME</div><div class="stat-num text-[var(--orange)]">${fmtDur(monthOT)}</div><div class="text-xs text-[var(--muted)] mt-1">this month</div></div>
+      <div class="stat-card"><div class="text-xs text-[var(--muted)] mb-1">LEAVE BALANCE</div><div class="stat-num text-[var(--green)]">${(e.leaveBalance?.casual||0) + (e.leaveBalance?.sick||0) + (e.leaveBalance?.earned||0)}</div><div class="text-xs text-[var(--muted)] mt-1">days available</div></div>
+    </div>
+    <div class="grid md:grid-cols-2 gap-4 mb-5">
+      <div class="card hover-lift cursor-pointer" id="qScan">
+        <div class="w-14 h-14 rounded-xl flex items-center justify-center mb-3" style="background:linear-gradient(135deg,var(--orange),var(--orange-2));">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h7v7h-7z"/></svg>
+        </div>
+        <h3 class="font-bold text-lg mb-1">Scan QR for Attendance</h3>
+        <p class="text-sm text-[var(--muted)]">Camera open hoga, QR scan karein — time + location auto-record.</p>
+      </div>
+      <div class="card hover-lift cursor-pointer" id="qLeave">
+        <div class="w-14 h-14 rounded-xl flex items-center justify-center mb-3" style="background:rgba(245,158,11,.15);">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--yellow)" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+        </div>
+        <h3 class="font-bold text-lg mb-1">Apply for Leave</h3>
+        <p class="text-sm text-[var(--muted)]">Multiple types — Casual, Sick, Earned, LOP. Half-day option bhi.</p>
+      </div>
+    </div>
+    <div class="grid md:grid-cols-2 gap-5">
+      <div class="card">
+        <h3 class="font-bold mb-3">Leave Balance</h3>
+        <div class="space-y-2">
+          ${S.leaveTypes.map(t => `<div class="flex justify-between items-center p-2 rounded bg-[var(--panel-2)]">
+            <span class="text-sm">${t.name}</span>
+            <span class="font-bold text-[var(--${t.color === 'gray' ? 'muted' : t.color})]">${e.leaveBalance?.[t.id]??0} days</span>
+          </div>`).join('')}
+        </div>
+      </div>
+      <div class="card">
+        <h3 class="font-bold mb-3">Latest Notices 📢</h3>
+        ${myNotices.length===0?'<p class="text-sm text-[var(--muted)]">Koi notice nahi.</p>':
+          `<div class="space-y-2">${myNotices.map(n => `
+            <div class="p-3 rounded bg-[var(--panel-2)]">
+              <div class="flex justify-between items-start mb-1"><span class="text-sm font-semibold">${n.title}</span><span class="badge badge-${n.priority==='high'?'red':n.priority==='medium'?'yellow':'blue'}">${n.priority||'normal'}</span></div>
+              <div class="text-xs text-[var(--muted)]">${n.body.substring(0,80)}${n.body.length>80?'…':''}</div>
+            </div>`).join('')}</div>`}
+      </div>
+    </div>`;
+}
+
+function eScan() {
+  const e = S.user, t = today();
+  const todayAtt = S.attendance.find(a => a.employeeId===e.id && a.date===t);
+  return `
+    <div class="max-w-2xl mx-auto">
+      <div class="mb-5"><h1 class="text-3xl font-extrabold mb-1">Scan Attendance</h1><p class="text-[var(--muted)]">${todayAtt && !todayAtt.checkOut ? 'Checked-in. Scan again to check out.' : todayAtt && todayAtt.checkOut ? 'Aaj done.' : 'Camera + Location allow karein.'}</p></div>
+      ${todayAtt ? `<div class="card mb-5">
+        <div class="text-xs text-[var(--muted)] mb-3">TODAY'S RECORD</div>
+        <div class="grid grid-cols-2 gap-4">
+          <div><div class="text-xs text-[var(--muted)]">Check In</div><div class="text-xl font-bold text-[var(--green)] mono">${todayAtt.checkIn}</div>${todayAtt.lateMinutes>0?`<span class="badge badge-red mt-1 inline-block">LATE ${fmtDur(todayAtt.lateMinutes)}</span>`:'<span class="badge badge-green mt-1 inline-block">ON-TIME</span>'}</div>
+          <div><div class="text-xs text-[var(--muted)]">Check Out</div><div class="text-xl font-bold ${todayAtt.checkOut?'text-[var(--red)]':'text-[var(--muted)]'} mono">${todayAtt.checkOut||'—'}</div>${todayAtt.overtimeMinutes>0?`<span class="badge badge-orange mt-1 inline-block">OT ${fmtDur(todayAtt.overtimeMinutes)}</span>`:todayAtt.checkOut?'<span class="badge badge-green mt-1 inline-block">ON-TIME</span>':''}</div>
+        </div>
+        ${todayAtt.workedMinutes>0?`<div class="mt-3 pt-3 border-t border-[var(--border)] text-sm">Worked: <span class="font-bold mono text-[var(--orange)]">${fmtDur(todayAtt.workedMinutes)}</span></div>`:''}
+        ${todayAtt.location?`<div class="mt-2 text-xs text-[var(--muted)]">📍 ${todayAtt.location.label || `${todayAtt.location.lat?.toFixed(4)}, ${todayAtt.location.lng?.toFixed(4)}`}</div>`:''}
+      </div>`:''}
+      ${todayAtt && todayAtt.checkOut ? '' : `
+        <div class="card scan-frame">
+          ${S.scanning?`<div id="qrReader" class="w-full"></div><button id="stopScan" class="btn btn-danger w-full justify-center mt-4">Stop</button>`:`
+            <div class="text-center py-10">
+              <div class="w-24 h-24 mx-auto rounded-2xl flex items-center justify-center mb-5" style="background:rgba(255,106,0,.1);">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="1.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h7v7h-7z"/></svg>
+              </div>
+              <button id="startScan" class="btn btn-primary text-lg">📷 Open Camera & Scan</button>
+              <p class="text-xs text-[var(--muted)] mt-3">Camera + Location permission allow karein</p>
+            </div>`}
+          <div id="scanMsg" class="mt-3 text-sm text-center"></div>
+        </div>`}
+    </div>`;
+}
+
+function eAttendance() {
+  const e = S.user, m = S.selMonth, y = S.selYear;
+  const days = new Date(y, m+1, 0).getDate();
+  const myAtt = S.attendance.filter(a => a.employeeId===e.id);
+  const tdy = new Date();
+  let p=0, a=0, l=0, totalWorked=0, totalOT=0;
+  const cells = [];
+  for (let i=0; i<new Date(y,m,1).getDay(); i++) cells.push('<div></div>');
+  for (let d=1; d<=days; d++) {
+    const ds = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const dt = new Date(y, m, d);
+    const wknd = isWeekend(dt);
+    const fut = dt > tdy;
+    const att = myAtt.find(x => x.date === ds);
+    const lv = S.leaves.find(x => x.employeeId===e.id && x.status==='approved' && inRange(ds, x.fromDate, x.toDate));
+    const hol = S.holidays.find(h => h.date===ds);
+    let cls, ttl=ds;
+    if (fut) cls = 'future';
+    else if (att) { cls = att.mode==='wfh'?'wfh':'present'; p++; totalWorked+=(att.workedMinutes||0); totalOT+=(att.overtimeMinutes||0); ttl = `${ds}\nIN ${att.checkIn}${att.checkOut?` OUT ${att.checkOut}`:''}\nWorked: ${fmtDur(att.workedMinutes||0)}${att.overtimeMinutes?` OT: ${fmtDur(att.overtimeMinutes)}`:''}`; }
+    else if (lv) { cls='leave'; l++; ttl = `${ds} · ${lv.type} leave`; }
+    else if (hol) { cls='holiday'; ttl = `${ds} · ${hol.name}`; }
+    else if (wknd) cls = 'weekend';
+    else { cls = 'absent'; a++; }
+    cells.push(`<div class="grid-cell ${cls}" style="font-size:14px;" title="${ttl}">${d}</div>`);
+  }
+  return `
+    <div class="mb-5 flex justify-between items-end flex-wrap gap-3">
+      <div><h1 class="text-3xl font-extrabold mb-1">My Attendance</h1><p class="text-[var(--muted)]">${monthName(m)} ${y}</p></div>
+      <div class="flex gap-2">
+        <select id="mSel" class="select" style="width:150px">${Array.from({length:12},(_,i)=>`<option value="${i}" ${i===m?'selected':''}>${monthName(i)}</option>`).join('')}</select>
+        <select id="ySel" class="select" style="width:110px">${Array.from({length:5},(_,i)=>y-2+i).map(yr=>`<option value="${yr}" ${yr===y?'selected':''}>${yr}</option>`).join('')}</select>
+      </div>
+    </div>
+    <div class="grid md:grid-cols-4 gap-3 mb-5">
+      <div class="stat-card"><div class="text-xs text-[var(--muted)] mb-1">PRESENT</div><div class="stat-num text-[var(--green)]">${p}</div></div>
+      <div class="stat-card"><div class="text-xs text-[var(--muted)] mb-1">ABSENT</div><div class="stat-num text-[var(--red)]">${a}</div></div>
+      <div class="stat-card"><div class="text-xs text-[var(--muted)] mb-1">LEAVES</div><div class="stat-num text-[var(--yellow)]">${l}</div></div>
+      <div class="stat-card"><div class="text-xs text-[var(--muted)] mb-1">TOTAL WORK</div><div class="stat-num text-[var(--orange)]">${Math.round(totalWorked/60)}h</div><div class="text-xs text-[var(--muted)] mt-1">OT: ${fmtDur(totalOT)}</div></div>
+    </div>
+    <div class="card mb-5">
+      <div class="grid grid-cols-7 gap-2 mb-2 text-center text-xs text-[var(--muted)] font-semibold">${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d=>`<div>${d}</div>`).join('')}</div>
+      <div class="grid grid-cols-7 gap-2">${cells.join('')}</div>
+    </div>
+    <div class="card">
+      <h3 class="font-bold mb-3">Detailed Records</h3>
+      <div class="overflow-x-auto">
+        <table>
+          <thead><tr><th>Date</th><th>IN</th><th>OUT</th><th>Worked</th><th>Late</th><th>OT</th><th>Location</th></tr></thead>
+          <tbody>
+            ${myAtt.filter(x=>x.date.startsWith(`${y}-${String(m+1).padStart(2,'0')}`)).slice().reverse().map(x => `<tr>
+              <td>${fmtDate(x.date)}</td>
+              <td class="mono text-[var(--green)]">${x.checkIn}</td>
+              <td class="mono ${x.checkOut?'text-[var(--red)]':'text-[var(--muted)]'}">${x.checkOut||'—'}</td>
+              <td class="mono">${fmtDur(x.workedMinutes||0)}</td>
+              <td class="mono ${x.lateMinutes>0?'text-[var(--red)]':'text-[var(--muted)]'}">${x.lateMinutes?fmtDur(x.lateMinutes):'—'}</td>
+              <td class="mono ${x.overtimeMinutes>0?'text-[var(--orange)] font-bold':'text-[var(--muted)]'}">${x.overtimeMinutes?fmtDur(x.overtimeMinutes):'—'}</td>
+              <td class="text-xs text-[var(--muted)]">${x.location?.label?.substring(0,35) || '—'}</td>
+            </tr>`).join('') || '<tr><td colspan="7" class="text-center text-[var(--muted)] py-6">Is month ka koi record nahi.</td></tr>'}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+function eYearly() {
+  const e = S.user, y = S.selYear;
+  return `
+    <div class="mb-5 flex justify-between items-end flex-wrap gap-3">
+      <div><h1 class="text-3xl font-extrabold mb-1">My Yearly View · ${y}</h1><p class="text-[var(--muted)]">Pure saal ka attendance heatmap — GitHub style</p></div>
+      <select id="ySel" class="select" style="width:110px">${Array.from({length:5},(_,i)=>y-2+i).map(yr=>`<option value="${yr}" ${yr===y?'selected':''}>${yr}</option>`).join('')}</select>
+    </div>
+    ${renderYearlyHeatmap(e, y)}
+    <div class="mt-5 card">
+      <h3 class="font-bold mb-3">Legend</h3>
+      <div class="flex gap-6 flex-wrap text-xs">
+        <span class="flex items-center gap-2"><div class="yearly-cell y-3"></div>8+ hours</span>
+        <span class="flex items-center gap-2"><div class="yearly-cell y-2"></div>6-8 hours</span>
+        <span class="flex items-center gap-2"><div class="yearly-cell y-1"></div>&lt; 6 hours</span>
+        <span class="flex items-center gap-2"><div class="yearly-cell y-l"></div>Leave</span>
+        <span class="flex items-center gap-2"><div class="yearly-cell y-h"></div>Holiday</span>
+        <span class="flex items-center gap-2"><div class="yearly-cell y-a"></div>Absent</span>
+        <span class="flex items-center gap-2"><div class="yearly-cell y-w"></div>Weekend</span>
+      </div>
+    </div>`;
+}
+
+function eLeave() {
+  const e = S.user;
+  const myLeaves = S.leaves.filter(l => l.employeeId===e.id).slice().reverse();
+  return `
+    <div class="mb-5"><h1 class="text-3xl font-extrabold mb-1">My Leaves</h1><p class="text-[var(--muted)]">Apply for leave or check status</p></div>
+    <div class="grid md:grid-cols-4 gap-3 mb-5">
+      ${S.leaveTypes.map(t => `<div class="stat-card">
+        <div class="text-xs text-[var(--muted)] mb-1">${t.name.toUpperCase()}</div>
+        <div class="stat-num text-[var(--${t.color === 'gray' ? 'muted' : t.color})]">${e.leaveBalance?.[t.id]??0}</div>
+        <div class="text-xs text-[var(--muted)] mt-1">days available</div>
+      </div>`).join('')}
+    </div>
+    <div class="grid md:grid-cols-2 gap-5">
+      <div class="card">
+        <h3 class="font-bold mb-3">New Leave Request</h3>
+        <div class="space-y-3">
+          <div><label class="label">Leave Type</label><select id="lvType" class="select">${S.leaveTypes.map(t => `<option value="${t.id}">${t.name}</option>`).join('')}</select></div>
+          <div class="grid grid-cols-2 gap-3">
+            <div><label class="label">From</label><input id="lvFrom" type="date" class="input" min="${today()}"></div>
+            <div><label class="label">To</label><input id="lvTo" type="date" class="input" min="${today()}"></div>
+          </div>
+          <div class="flex items-center gap-2"><input id="lvHalf" type="checkbox" class="w-4 h-4"><label class="text-sm">Half-day leave</label></div>
+          <div><label class="label">Reason</label><textarea id="lvReason" class="input" rows="3" placeholder="Leave ka reason..."></textarea></div>
+          <button id="submitLv" class="btn btn-primary w-full justify-center">Submit Request</button>
+          <div id="lvMsg" class="text-sm"></div>
+        </div>
+      </div>
+      <div class="card">
+        <h3 class="font-bold mb-3">My Leave History</h3>
+        ${myLeaves.length===0?'<p class="text-sm text-[var(--muted)]">Koi request nahi.</p>':
+          `<div class="space-y-2 max-h-[460px] overflow-y-auto">${myLeaves.map(l => { const days = daysBetween(l.fromDate, l.toDate)*(l.halfDay?0.5:1); return `
+            <div class="p-3 rounded bg-[var(--panel-2)]">
+              <div class="flex justify-between items-start mb-1">
+                <div class="text-sm font-semibold">${fmtShortDate(l.fromDate)} → ${fmtShortDate(l.toDate)} (${days}d)</div>
+                <span class="badge ${l.status==='approved'?'badge-green':l.status==='rejected'?'badge-red':'badge-yellow'}">${l.status}</span>
+              </div>
+              <div class="text-xs"><span class="badge badge-${S.leaveTypes.find(t=>t.id===l.type)?.color||'gray'}">${l.type}</span></div>
+              <div class="text-xs text-[var(--muted)] mt-1">${l.reason}</div>
+            </div>`; }).join('')}</div>`}
+      </div>
+    </div>`;
+}
+
+function eRegularize() {
+  const e = S.user;
+  const myReg = S.regularizations.filter(r => r.employeeId === e.id).slice().reverse();
+  return `
+    <div class="mb-5"><h1 class="text-3xl font-extrabold mb-1">Attendance Regularization</h1><p class="text-[var(--muted)]">Forgot to scan? Apply for manual attendance entry</p></div>
+    <div class="grid md:grid-cols-2 gap-5">
+      <div class="card">
+        <h3 class="font-bold mb-3">Apply for Regularization</h3>
+        <div class="space-y-3">
+          <div><label class="label">Date</label><input id="regDate" type="date" class="input" max="${today()}"></div>
+          <div class="grid grid-cols-2 gap-3">
+            <div><label class="label">Check In Time</label><input id="regIn" type="time" class="input"></div>
+            <div><label class="label">Check Out Time</label><input id="regOut" type="time" class="input"></div>
+          </div>
+          <div><label class="label">Reason</label><textarea id="regReason" class="input" rows="3" placeholder="QR scan kyu nahi kar paye?"></textarea></div>
+          <button id="submitReg" class="btn btn-primary w-full justify-center">Submit Request</button>
+          <div id="regMsg" class="text-sm"></div>
+        </div>
+      </div>
+      <div class="card">
+        <h3 class="font-bold mb-3">My Requests</h3>
+        ${myReg.length===0?'<p class="text-sm text-[var(--muted)]">Koi request nahi.</p>':
+          `<div class="space-y-2 max-h-[460px] overflow-y-auto">${myReg.map(r => `
+            <div class="p-3 rounded bg-[var(--panel-2)]">
+              <div class="flex justify-between items-start mb-1">
+                <div class="text-sm font-semibold">${fmtDate(r.date)}</div>
+                <span class="badge ${r.status==='approved'?'badge-green':r.status==='rejected'?'badge-red':'badge-yellow'}">${r.status}</span>
+              </div>
+              <div class="text-xs mono text-[var(--muted)] mb-1">IN ${r.checkIn||'—'} · OUT ${r.checkOut||'—'}</div>
+              <div class="text-xs text-[var(--muted)]">${r.reason}</div>
+            </div>`).join('')}</div>`}
+      </div>
+    </div>`;
+}
+
+function ePayslip() {
+  const e = S.user;
+  const myPayroll = S.payroll.filter(p => p.employeeId === e.id).slice().reverse();
+  const m = S.selMonth, y = S.selYear;
+  const viewing = S.viewingSlipId ? myPayroll.find(p => p.id === S.viewingSlipId) : myPayroll.find(p => p.month === m && p.year === y);
+  return `
+    <div class="mb-5 flex justify-between items-end flex-wrap gap-3 no-print">
+      <div><h1 class="text-3xl font-extrabold mb-1">My Payslips</h1><p class="text-[var(--muted)]">${myPayroll.length} payslips · ${myPayroll.filter(p=>p.status==='paid').length} paid</p></div>
+    </div>
+    ${myPayroll.length === 0 ? `<div class="card text-center text-[var(--muted)] py-12">
+      <div class="text-5xl mb-3">💰</div>
+      Abhi tak koi payslip generate nahi hua.<br><span class="text-sm">Admin payroll process karega tab yahan show hoga.</span>
+    </div>` : `
+    <div class="grid md:grid-cols-12 gap-5">
+      <div class="md:col-span-4 space-y-2">
+        <div class="text-xs text-[var(--muted)] uppercase font-semibold mb-2">All Payslips</div>
+        ${myPayroll.map(p => `
+          <div class="card cursor-pointer slipCard ${(viewing?.id === p.id) ? 'ring-2 ring-[var(--orange)]' : ''}" data-id="${p.id}">
+            <div class="flex justify-between items-start mb-2">
+              <div>
+                <div class="font-bold">${monthName(p.month)} ${p.year}</div>
+                <div class="text-xs text-[var(--muted)]">Processed ${fmtShortDate(p.processedAt)}</div>
+              </div>
+              <span class="badge ${p.status==='paid'?'badge-green':'badge-yellow'}">${p.status==='paid'?'✓ PAID':'Pending'}</span>
+            </div>
+            <div class="font-bold mono gradient-text text-xl">${inr(p.netSalary)}</div>
+            ${p.status==='paid' ? `<div class="text-xs text-[var(--green)] mt-1">💳 ${p.paymentMode||'—'} · ${fmtShortDate(p.paidAt)}${p.transactionId?` · TXN ${p.transactionId.substring(0,8)}`:''}</div>` : '<div class="text-xs text-[var(--muted)] mt-1">Awaiting payment</div>'}
+          </div>`).join('')}
+      </div>
+      <div class="md:col-span-8">
+        ${viewing ? `
+          <div class="flex justify-end mb-3 no-print"><button onclick="window.print()" class="btn btn-primary">🖨 Print Payslip</button></div>
+          ${renderPayslip(viewing)}
+          ${viewing.status === 'paid' ? `
+            <div class="card mt-4" style="background:rgba(16,185,129,.05); border-color:rgba(16,185,129,.3);">
+              <div class="flex items-center gap-2 mb-2"><span class="text-xl">✅</span><span class="font-bold text-[var(--green)]">Payment Confirmed</span></div>
+              <div class="grid md:grid-cols-2 gap-3 text-sm">
+                <div><span class="text-[var(--muted)]">Paid On:</span> <strong>${fmtDate(viewing.paidAt)}</strong></div>
+                <div><span class="text-[var(--muted)]">Mode:</span> <strong>${viewing.paymentMode||'—'}</strong></div>
+                ${viewing.transactionId ? `<div class="md:col-span-2"><span class="text-[var(--muted)]">Transaction ID:</span> <strong class="mono">${viewing.transactionId}</strong></div>`:''}
+                ${viewing.paymentRemarks ? `<div class="md:col-span-2"><span class="text-[var(--muted)]">Note:</span> ${viewing.paymentRemarks}</div>`:''}
+              </div>
+            </div>` : `
+            <div class="card mt-4" style="background:rgba(245,158,11,.05); border-color:rgba(245,158,11,.3);">
+              <div class="flex items-center gap-2"><span class="text-xl">⏳</span><span class="font-bold text-[var(--yellow)]">Payment Pending</span></div>
+              <div class="text-sm text-[var(--muted)] mt-1">Admin se confirm karega payment ke baad yahan update ho jayega.</div>
+            </div>`}
+        ` : '<div class="card text-center text-[var(--muted)] py-12">Left side se kisi payslip pe click karein.</div>'}
+      </div>
+    </div>`}`;
+}
+
+function renderPayslip(p) {
+  const emp = p.emp || S.employees.find(e => e.id === p.employeeId) || {};
+  return `
+    <div class="card max-w-3xl mx-auto" style="background:#fff; color:#000;">
+      <div class="flex justify-between items-start border-b border-gray-300 pb-4 mb-5">
+        <div>
+          <div class="text-xl font-bold" style="color:var(--orange)">EDITONE INTERNATIONAL PVT. LTD.</div>
+          <div class="text-xs text-gray-600">Naraina Industrial Area, New Delhi · Estd. 1999</div>
+        </div>
+        <div class="text-right">
+          <div class="text-sm font-bold">SALARY SLIP</div>
+          <div class="text-xs text-gray-600">${monthName(p.month)} ${p.year}</div>
+          ${p.status==='paid' ? `<div class="mt-1"><span class="badge badge-green">✓ PAID</span></div>` : ''}
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-4 mb-5 text-sm">
+        <div>
+          <div class="text-gray-600 text-xs uppercase mb-1">Employee Details</div>
+          <div><strong>${emp.name||'—'}</strong></div>
+          <div>${emp.designation || ''} · ${emp.department||''}</div>
+          <div class="text-xs">Code: ${emp.employeeCode || '—'}</div>
+          <div class="text-xs">Email: ${emp.email||'—'}</div>
+        </div>
+        <div>
+          <div class="text-gray-600 text-xs uppercase mb-1">Attendance Summary</div>
+          <div>Working Days: <strong>${p.workingDays}</strong></div>
+          <div>Present: <strong>${p.presentDays}</strong></div>
+          <div>Paid Leaves: <strong>${(p.paidLeaveDays||0).toFixed(1)}</strong></div>
+          <div>LOP Days: <strong>${(p.lopDays||0).toFixed(1)}</strong></div>
+          <div>Late: <strong>${fmtDur(p.totalLateMin||0)}</strong> · OT: <strong>${fmtDur(p.totalOTMin||0)}</strong></div>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-5 mb-5">
+        <div>
+          <div class="font-bold mb-2 pb-2 border-b border-gray-300" style="color:var(--green)">EARNINGS</div>
+          <div class="space-y-1 text-sm">
+            <div class="flex justify-between"><span>Basic Salary</span><span class="mono">${inr(p.earnings.basic)}</span></div>
+            <div class="flex justify-between"><span>HRA</span><span class="mono">${inr(p.earnings.hra)}</span></div>
+            <div class="flex justify-between"><span>Allowances</span><span class="mono">${inr(p.earnings.allowances)}</span></div>
+            <div class="flex justify-between"><span>Overtime Bonus</span><span class="mono">${inr(p.earnings.otBonus)}</span></div>
+            <div class="flex justify-between font-bold pt-2 border-t border-gray-300"><span>Gross Earnings</span><span class="mono">${inr(p.earnings.total)}</span></div>
+          </div>
+        </div>
+        <div>
+          <div class="font-bold mb-2 pb-2 border-b border-gray-300" style="color:var(--red)">DEDUCTIONS</div>
+          <div class="space-y-1 text-sm">
+            <div class="flex justify-between"><span>Provident Fund (12%)</span><span class="mono">${inr(p.deductions.pf)}</span></div>
+            <div class="flex justify-between"><span>Loss of Pay (${(p.lopDays||0).toFixed(1)}d)</span><span class="mono">${inr(p.deductions.lop)}</span></div>
+            <div class="flex justify-between"><span>Late Deduction</span><span class="mono">${inr(p.deductions.late)}</span></div>
+            <div class="flex justify-between font-bold pt-2 border-t border-gray-300"><span>Total Deductions</span><span class="mono">${inr(p.deductions.total)}</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="p-4 rounded-lg" style="background:rgba(255,106,0,.1); border:2px solid var(--orange);">
+        <div class="flex justify-between items-center">
+          <span class="font-bold text-lg">NET SALARY</span>
+          <span class="font-bold text-2xl mono" style="color:var(--orange)">${inr(p.netSalary)}</span>
+        </div>
+      </div>
+      ${p.status === 'paid' ? `
+        <div class="mt-4 p-3 rounded-lg" style="background:rgba(16,185,129,.08); border:1px solid rgba(16,185,129,.3);">
+          <div class="text-xs uppercase font-semibold mb-1" style="color:var(--green)">Payment Confirmation</div>
+          <div class="text-sm">Paid on <strong>${fmtDate(p.paidAt)}</strong> via <strong>${p.paymentMode}</strong>${p.transactionId?` · TXN: <span class="mono">${p.transactionId}</span>`:''}</div>
+        </div>` : ''}
+      <div class="text-xs text-gray-600 text-center mt-4 pt-4 border-t border-gray-300">
+        This is a computer-generated payslip · Generated on ${fmtDate(p.processedAt) || new Date().toLocaleDateString('en-IN')} · For queries contact HR
+      </div>
+    </div>`;
+}
+
+function eProfile() {
+  const e = S.user;
+  return `
+    <div class="mb-5"><h1 class="text-3xl font-extrabold mb-1">My Profile</h1><p class="text-[var(--muted)]">Personal details & employment info</p></div>
+    <div class="card mb-5">
+      <div class="flex items-center gap-5 flex-wrap">
+        <div class="avatar avatar-lg">${e.name[0]}</div>
+        <div class="flex-1">
+          <div class="text-2xl font-bold mb-1">${e.name}</div>
+          <div class="text-[var(--muted)] mb-1">${e.designation || '—'} · ${e.department}</div>
+          <div class="text-xs text-[var(--muted)] mono">Code: ${e.employeeCode || '—'} · Joined ${fmtDate(e.joinDate)}</div>
+        </div>
+        <button id="editProfile" class="btn btn-ghost">Edit Profile</button>
+      </div>
+    </div>
+    <div class="grid md:grid-cols-2 gap-5">
+      <div class="card">
+        <h3 class="font-bold mb-3">Personal Details</h3>
+        <div class="space-y-3 text-sm">
+          <div class="flex justify-between"><span class="text-[var(--muted)]">Email</span><span>${e.email}</span></div>
+          <div class="flex justify-between"><span class="text-[var(--muted)]">Phone</span><span class="mono">${e.phone}</span></div>
+          <div class="flex justify-between"><span class="text-[var(--muted)]">DOB</span><span>${e.dob ? fmtDate(e.dob) : '—'}</span></div>
+          <div class="flex justify-between"><span class="text-[var(--muted)]">Gender</span><span>${e.gender || '—'}</span></div>
+          <div class="flex justify-between gap-3"><span class="text-[var(--muted)] flex-shrink-0">Address</span><span class="text-right">${e.address || '—'}</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <h3 class="font-bold mb-3">Emergency Contact</h3>
+        <div class="space-y-3 text-sm">
+          <div class="flex justify-between"><span class="text-[var(--muted)]">Name</span><span>${e.emergency?.name || '—'}</span></div>
+          <div class="flex justify-between"><span class="text-[var(--muted)]">Phone</span><span class="mono">${e.emergency?.phone || '—'}</span></div>
+          <div class="flex justify-between"><span class="text-[var(--muted)]">Relation</span><span>${e.emergency?.relation || '—'}</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <h3 class="font-bold mb-3">Salary Structure</h3>
+        <div class="space-y-2 text-sm">
+          <div class="flex justify-between"><span class="text-[var(--muted)]">Basic</span><span class="mono">${inr(e.salary?.basic)}</span></div>
+          <div class="flex justify-between"><span class="text-[var(--muted)]">HRA</span><span class="mono">${inr(e.salary?.hra)}</span></div>
+          <div class="flex justify-between"><span class="text-[var(--muted)]">Allowances</span><span class="mono">${inr(e.salary?.allowances)}</span></div>
+          <div class="flex justify-between pt-2 border-t border-[var(--border)] font-bold"><span>Total CTC</span><span class="mono text-[var(--orange)]">${inr(e.salary?.total)}</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <h3 class="font-bold mb-3">Leave Balance</h3>
+        <div class="space-y-2">
+          ${S.leaveTypes.map(t => `<div class="flex justify-between text-sm">
+            <span class="text-[var(--muted)]">${t.name}</span>
+            <span class="font-bold text-[var(--${t.color === 'gray' ? 'muted' : t.color})]">${e.leaveBalance?.[t.id]??0} / ${t.annual}</span>
+          </div>`).join('')}
+        </div>
+      </div>
+    </div>`;
+}
+
+function eNotices() {
+  const e = S.user;
+  // Show org-wide notices + this employee's personal notices
+  const visible = S.notices.filter(n => !n.forEmployeeId || n.forEmployeeId === e.id);
+  return `
+    <div class="mb-5"><h1 class="text-3xl font-extrabold mb-1">Notices & Announcements</h1><p class="text-[var(--muted)]">Latest updates from HR · ${visible.length} total</p></div>
+    ${visible.length===0 ? '<div class="card text-center text-[var(--muted)] py-12">Koi notice nahi.</div>' :
+      `<div class="space-y-4">${visible.slice().reverse().map(n => `
+        <div class="card ${n.forEmployeeId ? 'border-[var(--orange)]' : ''}" style="${n.forEmployeeId ? 'background:rgba(255,106,0,.05);' : ''}">
+          <div class="flex justify-between items-start mb-3">
+            <div class="flex items-center gap-2">
+              <span class="badge badge-${n.priority==='high'?'red':n.priority==='medium'?'yellow':'blue'}">${n.priority||'normal'}</span>
+              ${n.forEmployeeId ? '<span class="badge badge-orange">PERSONAL</span>' : ''}
+              <h3 class="font-bold text-lg">${n.title}</h3>
+            </div>
+            <div class="text-xs text-[var(--muted)] mono">${fmtDateTime(n.postedAt)}</div>
+          </div>
+          <p class="text-sm" style="white-space:pre-wrap">${n.body}</p>
+          <div class="text-xs text-[var(--muted)] mt-3">— ${n.postedBy}</div>
+        </div>`).join('')}</div>`
+    }`;
+}
+
+// ==================== MODALS ====================
+function vModal() {
+  if (!S.modal) return '';
+  if (S.modal.type === 'employee') return modalEmployee();
+  if (S.modal.type === 'department') return modalDepartment();
+  if (S.modal.type === 'holiday') return modalHoliday();
+  if (S.modal.type === 'notice') return modalNotice();
+  if (S.modal.type === 'viewEmp') return modalViewEmp();
+  if (S.modal.type === 'slip') return modalSlip();
+  if (S.modal.type === 'editProfile') return modalEditProfile();
+  if (S.modal.type === 'markPaid') return modalMarkPaid();
+  if (S.modal.type === 'processPayroll') return modalProcessPayroll();
+  return '';
+}
+
+function modalMarkPaid() {
+  const p = S.payroll.find(x => x.id === S.modal.payrollId);
+  if (!p) return '';
+  const emp = S.employees.find(e => e.id === p.employeeId);
+  return `<div class="modal-bg" id="modalBg"><div class="modal" onclick="event.stopPropagation()">
+    <h3 class="text-xl font-bold mb-1">Mark Salary as Paid</h3>
+    <p class="text-sm text-[var(--muted)] mb-4">${emp?.name} · ${monthName(p.month)} ${p.year} · <span class="font-bold gradient-text">${inr(p.netSalary)}</span></p>
+    <div class="space-y-3">
+      <div><label class="label">Payment Date</label><input id="pay_date" type="date" class="input" value="${today()}"></div>
+      <div><label class="label">Payment Mode</label><select id="pay_mode" class="select">
+        <option value="Bank Transfer (NEFT)">Bank Transfer (NEFT)</option>
+        <option value="Bank Transfer (IMPS)">Bank Transfer (IMPS)</option>
+        <option value="UPI">UPI</option>
+        <option value="Cash">Cash</option>
+        <option value="Cheque">Cheque</option>
+      </select></div>
+      <div><label class="label">Transaction / Reference ID</label><input id="pay_txn" class="input" placeholder="e.g. UTR123456789"></div>
+      <div><label class="label">Remarks (optional)</label><textarea id="pay_remarks" class="input" rows="2" placeholder="Any note for employee..."></textarea></div>
+      <div class="p-3 rounded-lg" style="background:rgba(16,185,129,.08);">
+        <div class="text-xs text-[var(--green)]">✓ Employee ko automatically notification milega aur payslip "PAID" mark ho jayega unke panel mein</div>
+      </div>
+      <div class="flex gap-2 pt-2">
+        <button id="confirmPay" class="btn btn-primary flex-1 justify-center">✓ Confirm Payment</button>
+        <button id="cancelPay" class="btn btn-ghost">Cancel</button>
+      </div>
+    </div>
+  </div></div>`;
+}
+
+function modalProcessPayroll() {
+  const emp = S.employees.find(e => e.id === S.modal.empId);
+  if (!emp) return '';
+  const p = calcPayroll(emp, S.modal.m, S.modal.y);
+  return `<div class="modal-bg" id="modalBg"><div class="modal modal-lg" onclick="event.stopPropagation()">
+    <h3 class="text-xl font-bold mb-1">Process Payroll · ${monthName(S.modal.m)} ${S.modal.y}</h3>
+    <p class="text-sm text-[var(--muted)] mb-4">Confirm karein — phir employee ke payslip generate ho jayega</p>
+    <div class="mb-4 p-3 rounded-lg bg-[var(--panel-2)]">
+      <div class="flex items-center gap-3"><div class="avatar">${emp.name[0]}</div><div><div class="font-bold">${emp.name}</div><div class="text-xs text-[var(--muted)]">${emp.department}</div></div></div>
+    </div>
+    <div class="grid grid-cols-2 gap-3 text-sm mb-4">
+      <div class="p-2 rounded bg-[var(--panel-2)]"><div class="text-xs text-[var(--muted)]">Working Days</div><div class="font-bold">${p.workingDays}</div></div>
+      <div class="p-2 rounded bg-[var(--panel-2)]"><div class="text-xs text-[var(--muted)]">Present Days</div><div class="font-bold text-[var(--green)]">${p.presentDays}</div></div>
+      <div class="p-2 rounded bg-[var(--panel-2)]"><div class="text-xs text-[var(--muted)]">LOP Days</div><div class="font-bold text-[var(--red)]">${p.lopDays.toFixed(1)}</div></div>
+      <div class="p-2 rounded bg-[var(--panel-2)]"><div class="text-xs text-[var(--muted)]">Overtime</div><div class="font-bold text-[var(--orange)]">${fmtDur(p.totalOTMin)}</div></div>
+      <div class="p-2 rounded bg-[var(--panel-2)]"><div class="text-xs text-[var(--muted)]">Earnings</div><div class="font-bold text-[var(--green)] mono">${inr(p.earnings.total)}</div></div>
+      <div class="p-2 rounded bg-[var(--panel-2)]"><div class="text-xs text-[var(--muted)]">Deductions</div><div class="font-bold text-[var(--red)] mono">${inr(p.deductions.total)}</div></div>
+    </div>
+    <div class="p-3 rounded-lg mb-4" style="background:rgba(255,106,0,.1); border:2px solid var(--orange);">
+      <div class="flex justify-between items-center"><span class="font-bold">NET SALARY TO PAY</span><span class="font-bold text-2xl mono gradient-text">${inr(p.netSalary)}</span></div>
+    </div>
+    <div class="flex gap-2">
+      <button id="confirmProcess" class="btn btn-primary flex-1 justify-center">✓ Generate Payslip</button>
+      <button id="cancelProcess" class="btn btn-ghost">Cancel</button>
+    </div>
+  </div></div>`;
+}
+
+function modalEmployee() {
+  const e = S.modal.data || {};
+  return `<div class="modal-bg" id="modalBg"><div class="modal modal-lg" onclick="event.stopPropagation()">
+    <h3 class="text-xl font-bold mb-4">${e.id?'Edit':'Add'} Employee</h3>
+    <div class="grid grid-cols-2 gap-3">
+      <div><label class="label">Employee Code</label><input id="f_code" class="input" value="${e.employeeCode||'EDT'+String(S.employees.length+1).padStart(3,'0')}"></div>
+      <div><label class="label">Full Name *</label><input id="f_name" class="input" value="${e.name||''}"></div>
+      <div><label class="label">Email *</label><input id="f_email" class="input" value="${e.email||''}"></div>
+      <div><label class="label">Phone</label><input id="f_phone" class="input" value="${e.phone||''}"></div>
+      <div><label class="label">Department</label><select id="f_dept" class="select">${S.departments.map(d=>`<option ${e.department===d.name?'selected':''}>${d.name}</option>`).join('')}</select></div>
+      <div><label class="label">Designation</label><input id="f_desig" class="input" value="${e.designation||''}"></div>
+      <div><label class="label">Join Date</label><input id="f_join" type="date" class="input" value="${e.joinDate||today()}"></div>
+      <div><label class="label">Date of Birth</label><input id="f_dob" type="date" class="input" value="${e.dob||''}"></div>
+      <div><label class="label">Gender</label><select id="f_gender" class="select"><option ${e.gender==='Male'?'selected':''}>Male</option><option ${e.gender==='Female'?'selected':''}>Female</option><option ${e.gender==='Other'?'selected':''}>Other</option></select></div>
+      <div><label class="label">Password *</label><input id="f_pass" class="input" value="${e.password||''}"></div>
+      <div class="col-span-2"><label class="label">Address</label><input id="f_addr" class="input" value="${e.address||''}"></div>
+    </div>
+    <div class="border-t border-[var(--border)] mt-4 pt-4">
+      <div class="text-xs text-[var(--muted)] uppercase mb-2 font-semibold">Emergency Contact</div>
+      <div class="grid grid-cols-3 gap-3">
+        <div><label class="label">Name</label><input id="f_emName" class="input" value="${e.emergency?.name||''}"></div>
+        <div><label class="label">Phone</label><input id="f_emPhone" class="input" value="${e.emergency?.phone||''}"></div>
+        <div><label class="label">Relation</label><input id="f_emRel" class="input" value="${e.emergency?.relation||''}"></div>
+      </div>
+    </div>
+    <div class="border-t border-[var(--border)] mt-4 pt-4">
+      <div class="text-xs text-[var(--muted)] uppercase mb-2 font-semibold">Salary Structure (Monthly)</div>
+      <div class="grid grid-cols-3 gap-3">
+        <div><label class="label">Basic</label><input id="f_basic" type="number" class="input" value="${e.salary?.basic||0}"></div>
+        <div><label class="label">HRA</label><input id="f_hra" type="number" class="input" value="${e.salary?.hra||0}"></div>
+        <div><label class="label">Allowances</label><input id="f_allow" type="number" class="input" value="${e.salary?.allowances||0}"></div>
+      </div>
+    </div>
+    <div id="empFErr" class="text-sm text-[var(--red)] mt-3"></div>
+    <div class="flex gap-2 mt-4">
+      <button id="empSave" class="btn btn-primary flex-1 justify-center">${e.id?'Update':'Add Employee'}</button>
+      <button id="empCancel" class="btn btn-ghost">Cancel</button>
+    </div>
+  </div></div>`;
+}
+
+function modalDepartment() {
+  const d = S.modal.data || {};
+  return `<div class="modal-bg" id="modalBg"><div class="modal" onclick="event.stopPropagation()">
+    <h3 class="text-xl font-bold mb-4">${d.id?'Edit':'Add'} Department</h3>
+    <div class="space-y-3">
+      <div><label class="label">Name</label><input id="d_name" class="input" value="${d.name||''}"></div>
+      <div><label class="label">Head / Manager</label><input id="d_head" class="input" value="${d.head||''}"></div>
+      <div class="flex gap-2 pt-2">
+        <button id="deptSave" class="btn btn-primary flex-1 justify-center">Save</button>
+        <button id="deptCancel" class="btn btn-ghost">Cancel</button>
+      </div>
+    </div>
+  </div></div>`;
+}
+
+function modalHoliday() {
+  const h = S.modal.data || {};
+  return `<div class="modal-bg" id="modalBg"><div class="modal" onclick="event.stopPropagation()">
+    <h3 class="text-xl font-bold mb-4">Add Holiday</h3>
+    <div class="space-y-3">
+      <div><label class="label">Name</label><input id="h_name" class="input" placeholder="e.g. Diwali"></div>
+      <div><label class="label">Date</label><input id="h_date" type="date" class="input"></div>
+      <div><label class="label">Type</label><select id="h_type" class="select"><option value="national">National</option><option value="festival">Festival</option><option value="company">Company-specific</option></select></div>
+      <div class="flex gap-2 pt-2">
+        <button id="holSave" class="btn btn-primary flex-1 justify-center">Add Holiday</button>
+        <button id="holCancel" class="btn btn-ghost">Cancel</button>
+      </div>
+    </div>
+  </div></div>`;
+}
+
+function modalNotice() {
+  return `<div class="modal-bg" id="modalBg"><div class="modal modal-lg" onclick="event.stopPropagation()">
+    <h3 class="text-xl font-bold mb-4">Post Notice</h3>
+    <div class="space-y-3">
+      <div><label class="label">Title</label><input id="n_title" class="input" placeholder="Notice title..."></div>
+      <div><label class="label">Body</label><textarea id="n_body" class="input" rows="6" placeholder="Notice content..."></textarea></div>
+      <div><label class="label">Priority</label><select id="n_pri" class="select"><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select></div>
+      <div class="flex gap-2 pt-2">
+        <button id="noticeSave" class="btn btn-primary flex-1 justify-center">Post Notice</button>
+        <button id="noticeCancel" class="btn btn-ghost">Cancel</button>
+      </div>
+    </div>
+  </div></div>`;
+}
+
+function modalViewEmp() {
+  const e = S.employees.find(x => x.id === S.modal.id);
+  if (!e) return '';
+  return `<div class="modal-bg" id="modalBg"><div class="modal modal-lg" onclick="event.stopPropagation()">
+    <div class="flex justify-between items-start mb-4">
+      <div class="flex items-center gap-3">
+        <div class="avatar avatar-lg">${e.name[0]}</div>
+        <div>
+          <div class="text-xl font-bold">${e.name}</div>
+          <div class="text-sm text-[var(--muted)]">${e.designation||'—'} · ${e.department}</div>
+          <div class="text-xs text-[var(--muted)] mono">${e.employeeCode||'—'}</div>
+        </div>
+      </div>
+      <button id="vClose" class="btn btn-ghost">×</button>
+    </div>
+    <div class="grid grid-cols-2 gap-4 text-sm">
+      <div><span class="text-[var(--muted)] text-xs">Email:</span><br>${e.email}</div>
+      <div><span class="text-[var(--muted)] text-xs">Phone:</span><br><span class="mono">${e.phone}</span></div>
+      <div><span class="text-[var(--muted)] text-xs">DOB:</span><br>${e.dob?fmtDate(e.dob):'—'}</div>
+      <div><span class="text-[var(--muted)] text-xs">Gender:</span><br>${e.gender||'—'}</div>
+      <div><span class="text-[var(--muted)] text-xs">Joined:</span><br>${fmtDate(e.joinDate)}</div>
+      <div><span class="text-[var(--muted)] text-xs">CTC:</span><br><span class="mono">${inr(e.salary?.total)}</span></div>
+      <div class="col-span-2"><span class="text-[var(--muted)] text-xs">Address:</span><br>${e.address||'—'}</div>
+      <div class="col-span-2"><span class="text-[var(--muted)] text-xs">Emergency:</span><br>${e.emergency?.name||'—'} (${e.emergency?.relation||'—'}) · ${e.emergency?.phone||'—'}</div>
+    </div>
+  </div></div>`;
+}
+
+function modalSlip() {
+  const emp = S.employees.find(x => x.id === S.modal.emp);
+  if (!emp) return '';
+  // Prefer stored payroll record over recalc (so historical accuracy preserved)
+  const p = S.modal.payrollData || S.payroll.find(x => x.employeeId === S.modal.emp && x.month === S.modal.m && x.year === S.modal.y) || { ...calcPayroll(emp, S.modal.m, S.modal.y), employeeId: emp.id, month: S.modal.m, year: S.modal.y };
+  // Make sure emp is available for renderPayslip (it expects p.emp)
+  if (!p.emp) p.emp = emp;
+  return `<div class="modal-bg" id="modalBg"><div class="modal modal-lg" onclick="event.stopPropagation()">
+    <div class="flex justify-between mb-3 no-print">
+      <h3 class="text-xl font-bold">Salary Slip · ${monthName(p.month)} ${p.year} ${p.status==='paid'?'<span class="badge badge-green ml-2">PAID</span>':''}</h3>
+      <div class="flex gap-2">
+        <button onclick="window.print()" class="btn btn-primary text-sm">🖨 Print</button>
+        <button id="vClose" class="btn btn-ghost">×</button>
+      </div>
+    </div>
+    ${renderPayslip(p)}
+  </div></div>`;
+}
+
+function modalEditProfile() {
+  const e = S.user;
+  return `<div class="modal-bg" id="modalBg"><div class="modal" onclick="event.stopPropagation()">
+    <h3 class="text-xl font-bold mb-4">Edit My Profile</h3>
+    <div class="space-y-3">
+      <div><label class="label">Phone</label><input id="ep_phone" class="input" value="${e.phone||''}"></div>
+      <div><label class="label">Address</label><input id="ep_addr" class="input" value="${e.address||''}"></div>
+      <div class="border-t border-[var(--border)] pt-3">
+        <div class="text-xs text-[var(--muted)] uppercase mb-2 font-semibold">Emergency Contact</div>
+        <div class="space-y-2">
+          <input id="ep_emName" class="input" placeholder="Name" value="${e.emergency?.name||''}">
+          <input id="ep_emPhone" class="input" placeholder="Phone" value="${e.emergency?.phone||''}">
+          <input id="ep_emRel" class="input" placeholder="Relation" value="${e.emergency?.relation||''}">
+        </div>
+      </div>
+      <div class="border-t border-[var(--border)] pt-3">
+        <div class="text-xs text-[var(--muted)] uppercase mb-2 font-semibold">Change Password (optional)</div>
+        <input id="ep_pass" type="password" class="input" placeholder="New password (leave blank to keep)">
+      </div>
+      <div class="flex gap-2 pt-2">
+        <button id="profileSave" class="btn btn-primary flex-1 justify-center">Save</button>
+        <button id="profileCancel" class="btn btn-ghost">Cancel</button>
+      </div>
+    </div>
+  </div></div>`;
+}
+
+// ==================== HANDLERS ====================
+function attachHandlers() {
+  // Landing
+  document.getElementById('goAdmin')?.addEventListener('click', () => { S.view='adminLogin'; render(); });
+  document.getElementById('goEmp')?.addEventListener('click', () => { S.view='empLogin'; render(); });
+  document.getElementById('backHome')?.addEventListener('click', () => { S.view='landing'; render(); });
+  
+  // Admin login
+  document.getElementById('aSubmit')?.addEventListener('click', async () => {
+    const u = document.getElementById('aU').value.trim(), p = document.getElementById('aP').value;
+    try {
+      const result = await API.post('/api/auth/admin-login', { username: u, password: p });
+      API.setToken(result.token);
+      S.user = result.user; S.role = 'admin'; S.view = 'admin';
+      await init();
+      render();
+    } catch (e) {
+      document.getElementById('aErr').textContent = e.message;
+    }
+  });
+  document.getElementById('aU')?.addEventListener('keypress', e => { if (e.key==='Enter') document.getElementById('aP').focus(); });
+  document.getElementById('aP')?.addEventListener('keypress', e => { if (e.key==='Enter') document.getElementById('aSubmit').click(); });
+  
+  // Emp login
+  document.getElementById('eSubmit')?.addEventListener('click', async () => {
+    const em = document.getElementById('eE').value.trim().toLowerCase(), p = document.getElementById('eP').value;
+    try {
+      const result = await API.post('/api/auth/employee-login', { email: em, password: p });
+      API.setToken(result.token);
+      S.user = result.user; S.role = 'employee'; S.view = 'employee';
+      await init();
+      render();
+    } catch (e) {
+      document.getElementById('eErr').textContent = e.message;
+    }
+  });
+  document.getElementById('eE')?.addEventListener('keypress', e => { if (e.key==='Enter') document.getElementById('eP').focus(); });
+  document.getElementById('eP')?.addEventListener('keypress', e => { if (e.key==='Enter') document.getElementById('eSubmit').click(); });
+  
+  // Sidebar/tab
+  document.querySelectorAll('[data-tab]').forEach(el => el.addEventListener('click', () => { 
+    if (S.role === 'admin') S.adminTab = el.dataset.tab; 
+    else S.empTab = el.dataset.tab;
+    if (S.scanner) stopScanner();
+    render(); 
+  }));
+  document.querySelectorAll('.empTab').forEach(el => el.addEventListener('click', () => {
+    S.empTab = el.dataset.tab;
+    if (S.scanner) stopScanner();
+    render();
+  }));
+  document.getElementById('aLogout')?.addEventListener('click', logout);
+  document.getElementById('eLogout')?.addEventListener('click', logout);
+  
+  // QR
+  document.getElementById('refreshQR')?.addEventListener('click', async () => {
+    S.todayQR = await API.post('/api/qr/refresh');
+    render();
+  });
+  document.getElementById('dlQR')?.addEventListener('click', () => {
+    const img = document.querySelector('#qrcode img'); if (!img) return;
+    const a = document.createElement('a'); a.href = img.src; a.download = `qr-${today()}.png`; a.click();
+  });
+  document.getElementById('printQR')?.addEventListener('click', () => {
+    const img = document.querySelector('#qrcode img'); if (!img) return;
+    const w = window.open(); w.document.write(`<html><body style="text-align:center;padding:40px;font-family:sans-serif"><h2>Editone International — Attendance QR</h2><p>${today()}</p>${img.outerHTML}<p style="margin-top:20px;font-size:11px">${S.todayQR.code}</p></body></html>`); w.print();
+  });
+  
+  // Employees
+  document.getElementById('empSearch')?.addEventListener('input', e => { S.search = e.target.value; aRefresh('employees'); });
+  document.getElementById('addEmp')?.addEventListener('click', () => { S.modal = { type:'employee', data:{} }; render(); });
+  document.querySelectorAll('.editEmp').forEach(b => b.addEventListener('click', () => {
+    const e = S.employees.find(x => x.id === b.dataset.id);
+    S.modal = { type:'employee', data: { ...e } }; render();
+  }));
+  document.querySelectorAll('.viewEmp').forEach(b => b.addEventListener('click', () => { S.modal = { type:'viewEmp', id: b.dataset.id }; render(); }));
+  document.querySelectorAll('.delEmp').forEach(b => b.addEventListener('click', async () => {
+    if (!confirm('Delete karna hai?')) return;
+    await API.del('/api/employees/' + b.dataset.id);
+    await refreshData();
+  }));
+  document.getElementById('empCancel')?.addEventListener('click', () => { S.modal = null; render(); });
+  document.getElementById('modalBg')?.addEventListener('click', () => { S.modal = null; render(); });
+  document.getElementById('vClose')?.addEventListener('click', () => { S.modal = null; render(); });
+  document.getElementById('empSave')?.addEventListener('click', async () => {
+    const data = {
+      employeeCode: document.getElementById('f_code').value.trim(),
+      name: document.getElementById('f_name').value.trim(),
+      email: document.getElementById('f_email').value.trim(),
+      phone: document.getElementById('f_phone').value.trim(),
+      department: document.getElementById('f_dept').value,
+      designation: document.getElementById('f_desig').value.trim(),
+      joinDate: document.getElementById('f_join').value,
+      dob: document.getElementById('f_dob').value,
+      gender: document.getElementById('f_gender').value,
+      password: document.getElementById('f_pass').value,
+      address: document.getElementById('f_addr').value.trim(),
+      emergency: {
+        name: document.getElementById('f_emName').value.trim(),
+        phone: document.getElementById('f_emPhone').value.trim(),
+        relation: document.getElementById('f_emRel').value.trim(),
+      },
+      salary: {
+        basic: +document.getElementById('f_basic').value || 0,
+        hra: +document.getElementById('f_hra').value || 0,
+        allowances: +document.getElementById('f_allow').value || 0,
+      },
+      status: 'active',
+    };
+    if (!data.name || !data.email || (!S.modal.data.id && !data.password)) { 
+      document.getElementById('empFErr').textContent = 'Name, email aur password mandatory.'; return; 
+    }
+    try {
+      if (S.modal.data.id) {
+        await API.put('/api/employees/' + S.modal.data.id, data);
+      } else {
+        await API.post('/api/employees', data);
+      }
+      S.modal = null;
+      await refreshData();
+    } catch (e) {
+      document.getElementById('empFErr').textContent = e.message;
+    }
+  });
+  document.getElementById('exportEmp')?.addEventListener('click', () => exportCSV('employees.csv', S.employees, ['employeeCode','name','email','phone','department','designation','joinDate','status']));
+  
+  // Departments
+  document.getElementById('addDept')?.addEventListener('click', () => { S.modal = { type:'department', data:{} }; render(); });
+  document.querySelectorAll('.editDept').forEach(b => b.addEventListener('click', () => {
+    const d = S.departments.find(x => x.id === b.dataset.id); S.modal = { type:'department', data:{...d} }; render();
+  }));
+  document.querySelectorAll('.delDept').forEach(b => b.addEventListener('click', async () => {
+    if (!confirm('Delete department?')) return;
+    await API.del('/api/departments/' + b.dataset.id);
+    await refreshData();
+  }));
+  document.getElementById('deptCancel')?.addEventListener('click', () => { S.modal = null; render(); });
+  document.getElementById('deptSave')?.addEventListener('click', async () => {
+    const data = { name: document.getElementById('d_name').value.trim(), head: document.getElementById('d_head').value.trim() };
+    if (!data.name) return;
+    if (S.modal.data.id) await API.put('/api/departments/' + S.modal.data.id, data);
+    else await API.post('/api/departments', data);
+    S.modal = null;
+    await refreshData();
+  });
+  
+  // Month/year selectors
+  document.getElementById('mSel')?.addEventListener('change', e => { S.selMonth = +e.target.value; render(); });
+  document.getElementById('ySel')?.addEventListener('change', e => { S.selYear = +e.target.value; render(); });
+  document.getElementById('exportAtt')?.addEventListener('click', () => exportAttendanceCSV());
+  document.getElementById('payrollCSV')?.addEventListener('click', () => exportPayrollCSV());
+  
+  // Leaves admin
+  document.querySelectorAll('.approveLv').forEach(b => b.addEventListener('click', async () => {
+    await API.put('/api/leaves/' + b.dataset.id + '/decision', { status: 'approved' });
+    await refreshData();
+  }));
+  document.querySelectorAll('.rejectLv').forEach(b => b.addEventListener('click', async () => {
+    await API.put('/api/leaves/' + b.dataset.id + '/decision', { status: 'rejected' });
+    await refreshData();
+  }));
+  
+  // Regularization admin
+  document.querySelectorAll('.approveReg').forEach(b => b.addEventListener('click', async () => {
+    await API.put('/api/regularizations/' + b.dataset.id + '/decision', { status: 'approved' });
+    await refreshData();
+  }));
+  document.querySelectorAll('.rejectReg').forEach(b => b.addEventListener('click', async () => {
+    await API.put('/api/regularizations/' + b.dataset.id + '/decision', { status: 'rejected' });
+    await refreshData();
+  }));
+  
+  // Holidays
+  document.getElementById('addHoliday')?.addEventListener('click', () => { S.modal = { type:'holiday', data:{} }; render(); });
+  document.querySelectorAll('.delHol').forEach(b => b.addEventListener('click', async () => {
+    if (!confirm('Delete holiday?')) return;
+    await API.del('/api/holidays/' + b.dataset.id);
+    await refreshData();
+  }));
+  document.getElementById('holCancel')?.addEventListener('click', () => { S.modal = null; render(); });
+  document.getElementById('holSave')?.addEventListener('click', async () => {
+    const name = document.getElementById('h_name').value.trim();
+    const date = document.getElementById('h_date').value;
+    const type = document.getElementById('h_type').value;
+    if (!name || !date) return;
+    await API.post('/api/holidays', { name, date, type });
+    S.modal = null;
+    await refreshData();
+  });
+  
+  // Notices
+  document.getElementById('addNotice')?.addEventListener('click', () => { S.modal = { type:'notice' }; render(); });
+  document.querySelectorAll('.delNotice').forEach(b => b.addEventListener('click', async () => {
+    if (!confirm('Delete notice?')) return;
+    await API.del('/api/notices/' + b.dataset.id);
+    await refreshData();
+  }));
+  document.getElementById('noticeCancel')?.addEventListener('click', () => { S.modal = null; render(); });
+  document.getElementById('noticeSave')?.addEventListener('click', async () => {
+    const title = document.getElementById('n_title').value.trim();
+    const body = document.getElementById('n_body').value.trim();
+    const priority = document.getElementById('n_pri').value;
+    if (!title || !body) return;
+    await API.post('/api/notices', { title, body, priority });
+    S.modal = null;
+    await refreshData();
+  });
+  
+  // Settings
+  document.getElementById('saveCfg')?.addEventListener('click', async () => {
+    const c = {
+      ...S.config,
+      officeIn: document.getElementById('cIn').value,
+      officeOut: document.getElementById('cOut').value,
+      overtimeCap: document.getElementById('cCap').value,
+      gracePeriod: +document.getElementById('cGrace').value || 0,
+      workingDays: +document.getElementById('cWD').value,
+      otRate: +document.getElementById('cOTR').value || 1.5,
+    };
+    const msg = document.getElementById('cfgMsg');
+    if (timeToMin(c.officeIn) >= timeToMin(c.officeOut)) { msg.innerHTML = '<span style="color:var(--red)">Office Out, In ke baad chahiye</span>'; return; }
+    if (timeToMin(c.overtimeCap) <= timeToMin(c.officeOut)) { msg.innerHTML = '<span style="color:var(--red)">OT Cap, Out ke baad chahiye</span>'; return; }
+    await API.put('/api/config', c);
+    S.config = c;
+    msg.innerHTML = '<span style="color:var(--green)">✓ Saved!</span>';
+    setTimeout(() => render(), 800);
+  });
+  
+  // Reports exports
+  document.getElementById('expEmp')?.addEventListener('click', () => exportCSV('employees.csv', S.employees, ['employeeCode','name','email','phone','department','designation','joinDate','status']));
+  document.getElementById('expAtt')?.addEventListener('click', () => exportAttendanceCSV(true));
+  document.getElementById('expLv')?.addEventListener('click', () => exportCSV('leaves.csv', S.leaves.map(l => ({...l, employeeName: S.employees.find(e=>e.id===l.employeeId)?.name})), ['employeeName','type','fromDate','toDate','status','reason']));
+  document.getElementById('expPay')?.addEventListener('click', () => exportPayrollCSV());
+  
+  // Slip
+  document.querySelectorAll('.viewSlip').forEach(b => b.addEventListener('click', () => { 
+    S.modal = { type:'slip', emp: b.dataset.emp, m: +b.dataset.m, y: +b.dataset.y };
+    render();
+  }));
+  
+  // EMPLOYEE handlers
+  document.getElementById('qScan')?.addEventListener('click', () => { S.empTab = 'scan'; render(); });
+  document.getElementById('qLeave')?.addEventListener('click', () => { S.empTab = 'leave'; render(); });
+  document.getElementById('startScan')?.addEventListener('click', startScanner);
+  document.getElementById('stopScan')?.addEventListener('click', stopScanner);
+  
+  document.getElementById('submitLv')?.addEventListener('click', async () => {
+    const type = document.getElementById('lvType').value;
+    const from = document.getElementById('lvFrom').value;
+    const to = document.getElementById('lvTo').value;
+    const halfDay = document.getElementById('lvHalf').checked;
+    const reason = document.getElementById('lvReason').value.trim();
+    const msg = document.getElementById('lvMsg');
+    if (!from || !to || !reason) { msg.innerHTML = '<span style="color:var(--red)">All fields required</span>'; return; }
+    if (to < from) { msg.innerHTML = '<span style="color:var(--red)">To date should be after From</span>'; return; }
+    try {
+      await API.post('/api/leaves', { type, fromDate: from, toDate: to, halfDay, reason });
+      msg.innerHTML = '<span style="color:var(--green)">✓ Submitted! Admin approval ka wait karein.</span>';
+      await refreshData();
+    } catch (e) { msg.innerHTML = `<span style="color:var(--red)">${e.message}</span>`; }
+  });
+  
+  document.getElementById('submitReg')?.addEventListener('click', async () => {
+    const date = document.getElementById('regDate').value;
+    const checkIn = document.getElementById('regIn').value;
+    const checkOut = document.getElementById('regOut').value;
+    const reason = document.getElementById('regReason').value.trim();
+    const msg = document.getElementById('regMsg');
+    if (!date || !reason || (!checkIn && !checkOut)) { msg.innerHTML = '<span style="color:var(--red)">Date, reason, aur kam-se-kam ek time chahiye</span>'; return; }
+    try {
+      await API.post('/api/regularizations', { date, checkIn, checkOut, reason });
+      msg.innerHTML = '<span style="color:var(--green)">✓ Submitted!</span>';
+      await refreshData();
+    } catch (e) { msg.innerHTML = `<span style="color:var(--red)">${e.message}</span>`; }
+  });
+  
+  document.getElementById('editProfile')?.addEventListener('click', () => { S.modal = { type:'editProfile' }; render(); });
+  document.getElementById('profileCancel')?.addEventListener('click', () => { S.modal = null; render(); });
+  document.getElementById('profileSave')?.addEventListener('click', async () => {
+    const data = {
+      phone: document.getElementById('ep_phone').value.trim(),
+      address: document.getElementById('ep_addr').value.trim(),
+      emergency: {
+        name: document.getElementById('ep_emName').value.trim(),
+        phone: document.getElementById('ep_emPhone').value.trim(),
+        relation: document.getElementById('ep_emRel').value.trim(),
+      },
+    };
+    const newPass = document.getElementById('ep_pass').value;
+    if (newPass) data.password = newPass;
+    await API.put('/api/employees/' + S.user.id, data);
+    S.modal = null;
+    // Refresh user data
+    S.user = await API.get('/api/auth/me');
+    render();
+  });
+
+  // Attach all extra handlers for new features
+  attachExtraHandlers();
+}
+
+function aRefresh(tab) { S.adminTab = tab; render(); }
+
+// Open employee detail view
+function openEmployee(id) {
+  S.viewEmpId = id;
+  S.viewEmpTab = 'overview';
+  render();
+}
+
+function attachExtraHandlers() {
+  // Open employee detail on row click
+  document.querySelectorAll('.openEmp').forEach(el => el.addEventListener('click', () => openEmployee(el.dataset.id)));
+  document.getElementById('backEmpList')?.addEventListener('click', () => { S.viewEmpId = null; render(); });
+  document.querySelectorAll('.empDtlTab').forEach(b => b.addEventListener('click', () => { S.viewEmpTab = b.dataset.tab; render(); }));
+  
+  // Process payroll from employee detail
+  document.getElementById('empProcessPay')?.addEventListener('click', () => { 
+    S.modal = { type:'processPayroll', empId: S.viewEmpId, m: S.selMonth, y: S.selYear }; render(); 
+  });
+  document.getElementById('empProcessPay2')?.addEventListener('click', () => { 
+    S.modal = { type:'processPayroll', empId: S.viewEmpId, m: S.selMonth, y: S.selYear }; render(); 
+  });
+  
+  // Process payroll from payroll list
+  document.querySelectorAll('.processPay').forEach(b => b.addEventListener('click', () => {
+    S.modal = { type:'processPayroll', empId: b.dataset.emp, m: +b.dataset.m, y: +b.dataset.y };
+    render();
+  }));
+  
+  // Confirm process payroll
+  document.getElementById('confirmProcess')?.addEventListener('click', async () => {
+    try {
+      await API.post('/api/payroll/process', { employeeId: S.modal.empId, month: S.modal.m, year: S.modal.y });
+      const emp = S.employees.find(e => e.id === S.modal.empId) || S.user;
+      alert(`✓ Payslip generated for ${emp.name} · ${monthName(S.modal.m)} ${S.modal.y}`);
+      S.modal = null;
+      await refreshData();
+    } catch (e) { alert('Error: ' + e.message); }
+  });
+  document.getElementById('cancelProcess')?.addEventListener('click', () => { S.modal = null; render(); });
+  
+  // Process all employees for selected month
+  document.getElementById('processAllPay')?.addEventListener('click', async () => {
+    if (!confirm(`Sab employees ka ${monthName(S.selMonth)} ${S.selYear} payroll process karna hai?`)) return;
+    let count = 0, errs = 0;
+    for (const emp of S.employees.filter(e => e.status === 'active')) {
+      try {
+        await API.post('/api/payroll/process', { employeeId: emp.id, month: S.selMonth, year: S.selYear });
+        count++;
+      } catch (e) { errs++; }
+    }
+    alert(`✓ ${count} processed${errs?`, ${errs} errors`:''}.`);
+    await refreshData();
+  });
+  
+  // Mark paid
+  document.querySelectorAll('.markPaid').forEach(b => b.addEventListener('click', () => {
+    S.modal = { type:'markPaid', payrollId: b.dataset.pid };
+    render();
+  }));
+  document.getElementById('cancelPay')?.addEventListener('click', () => { S.modal = null; render(); });
+  document.getElementById('confirmPay')?.addEventListener('click', async () => {
+    try {
+      await API.put('/api/payroll/' + S.modal.payrollId + '/pay', {
+        paidAt: document.getElementById('pay_date').value,
+        paymentMode: document.getElementById('pay_mode').value,
+        transactionId: document.getElementById('pay_txn').value.trim(),
+        paymentRemarks: document.getElementById('pay_remarks').value.trim(),
+      });
+      const p = S.payroll.find(x => x.id === S.modal.payrollId);
+      const emp = S.employees.find(e => e.id === p?.employeeId);
+      alert(`✓ Payment marked${emp ? ` for ${emp.name}` : ''}\nEmployee ko notification mil gayi hai.`);
+      S.modal = null;
+      await refreshData();
+    } catch (e) { alert('Error: ' + e.message); }
+  });
+  
+  // Delete payroll
+  document.querySelectorAll('.delPay').forEach(b => b.addEventListener('click', async () => {
+    if (!confirm('Payroll record delete karna hai?')) return;
+    await API.del('/api/payroll/' + b.dataset.pid);
+    await refreshData();
+  }));
+  
+  // View slip from history
+  document.querySelectorAll('.viewSlip2').forEach(b => b.addEventListener('click', () => {
+    const p = S.payroll.find(x => x.id === b.dataset.pid);
+    if (!p) return;
+    S.modal = { type:'slip', emp: p.employeeId, m: p.month, y: p.year, payrollData: p };
+    render();
+  }));
+  
+  // Employee slip card click
+  document.querySelectorAll('.slipCard').forEach(el => el.addEventListener('click', () => { S.viewingSlipId = el.dataset.id; render(); }));
+  
+  // Office location
+  document.getElementById('useCurrentLoc')?.addEventListener('click', () => {
+    const msg = document.getElementById('officeMsg');
+    msg.innerHTML = '<span style="color:var(--muted)">📍 Getting location...</span>';
+    navigator.geolocation.getCurrentPosition(pos => {
+      document.getElementById('cOLat').value = pos.coords.latitude.toFixed(6);
+      document.getElementById('cOLng').value = pos.coords.longitude.toFixed(6);
+      msg.innerHTML = '<span style="color:var(--green)">✓ Location captured. Click Save.</span>';
+    }, err => {
+      msg.innerHTML = `<span style="color:var(--red)">Error: ${err.message}</span>`;
+    });
+  });
+  document.getElementById('saveOffice')?.addEventListener('click', async () => {
+    S.config.officeName = document.getElementById('cOName').value.trim();
+    S.config.officeLat = +document.getElementById('cOLat').value || null;
+    S.config.officeLng = +document.getElementById('cOLng').value || null;
+    S.config.maxDistance = +document.getElementById('cMaxDist').value || 500;
+    await API.put('/api/config', S.config);
+    document.getElementById('officeMsg').innerHTML = '<span style="color:var(--green)">✓ Office location saved!</span>';
+    setTimeout(() => render(), 800);
+  });
+  
+  // Export employee attendance
+  document.getElementById('empExportAtt')?.addEventListener('click', () => {
+    const emp = S.employees.find(e => e.id === S.viewEmpId);
+    const rows = S.attendance.filter(a => a.employeeId === emp.id).map(a => ({
+      date: a.date, checkIn: a.checkIn||'', checkOut: a.checkOut||'',
+      workedMin: a.workedMinutes||0, lateMin: a.lateMinutes||0, otMin: a.overtimeMinutes||0,
+      checkInLocation: a.location?.label||'', lat: a.location?.lat||'', lng: a.location?.lng||'',
+      mode: a.mode||'office'
+    }));
+    exportCSV(`${emp.name.replace(/\s/g,'_')}-attendance.csv`, rows, ['date','checkIn','checkOut','workedMin','lateMin','otMin','checkInLocation','lat','lng','mode']);
+  });
+}
+
+function logout() {
+  if (S.scanner) stopScanner();
+  API.setToken(null);
+  S.user = null; S.role = null; S.view = 'landing';
+  S.adminTab = 'dashboard'; S.empTab = 'dashboard'; S.search = '';
+  S.viewEmpId = null; S.viewingSlipId = null;
+  render();
+}
+
+// ==================== SCANNER ====================
+async function startScanner() {
+  S.scanning = true; render();
+  let loc = null;
+  try {
+    loc = await new Promise(resolve => {
+      if (!navigator.geolocation) return resolve(null);
+      navigator.geolocation.getCurrentPosition(async pos => {
+        const lat = pos.coords.latitude, lng = pos.coords.longitude;
+        const accuracy = Math.round(pos.coords.accuracy);
+        let label = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+        try {
+          const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=16`);
+          const d = await r.json();
+          if (d.display_name) label = d.display_name;
+        } catch {}
+        resolve({ lat, lng, label, accuracy, capturedAt: new Date().toISOString(), ua: navigator.userAgent.substring(0,80) });
+      }, () => resolve(null), { enableHighAccuracy:true, timeout:10000 });
+    });
+  } catch {}
+  S.empLocation = loc;
+  
+  setTimeout(() => {
+    try {
+      S.scanner = new Html5Qrcode("qrReader");
+      S.scanner.start({ facingMode: "environment" }, { fps:10, qrbox:{ width:250, height:250 } }, onScan, () => {})
+        .catch(err => {
+          document.getElementById('scanMsg').innerHTML = `<span style="color:var(--red)">Camera error: ${err.message||err}</span>`;
+          S.scanning = false;
+        });
+    } catch (e) {
+      document.getElementById('scanMsg').innerHTML = `<span style="color:var(--red)">${e.message}</span>`;
+    }
+  }, 100);
+}
+
+async function stopScanner() {
+  if (S.scanner) { try { await S.scanner.stop(); } catch {} S.scanner = null; }
+  S.scanning = false; render();
+}
+
+async function onScan(decoded) {
+  await stopScanner();
+  try {
+    const result = await API.post('/api/attendance/scan', { qrCode: decoded, location: S.empLocation });
+    if (result.action === 'check-in') {
+      alert(`✅ Check-In at ${result.time}\n${result.lateMinutes > 0 ? `⚠ Late by ${fmtDur(result.lateMinutes)}` : '✓ On-Time'}`);
+    } else if (result.action === 'check-out') {
+      const outMsg = result.outStatus === 'overtime' ? `⏰ Overtime: ${fmtDur(result.overtimeMinutes)}` :
+                     result.outStatus === 'early-out' ? `⚠ Early-Out by ${fmtDur(result.earlyOutMinutes)}` : '✓ On-Time';
+      alert(`✅ Check-Out at ${result.time}\nWorked: ${fmtDur(result.workedMinutes)}\n${outMsg}`);
+    }
+    await refreshData();
+  } catch (e) {
+    document.getElementById('scanMsg').innerHTML = `<span style="color:var(--red)">❌ ${e.message}</span>`;
+    render();
+  }
+}
+
+// ==================== CSV EXPORTS ====================
+function exportCSV(filename, rows, fields) {
+  if (rows.length === 0) { alert('No data to export'); return; }
+  const header = fields.join(',');
+  const csv = [header, ...rows.map(r => fields.map(f => {
+    let v = f.split('.').reduce((o,k) => o?.[k], r) || '';
+    v = String(v).replace(/"/g,'""');
+    return /[,"\n]/.test(v) ? `"${v}"` : v;
+  }).join(','))].join('\n');
+  const blob = new Blob([csv], { type:'text/csv' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename; a.click();
+}
+
+function exportAttendanceCSV(all = false) {
+  const m = S.selMonth, y = S.selYear;
+  const data = all ? S.attendance : S.attendance.filter(a => a.date.startsWith(`${y}-${String(m+1).padStart(2,'0')}`));
+  const rows = data.map(a => {
+    const e = S.employees.find(x => x.id === a.employeeId);
+    return {
+      name: e?.name || '?', code: e?.employeeCode || '', dept: e?.department || '',
+      date: a.date, checkIn: a.checkIn || '', checkOut: a.checkOut || '',
+      workedMin: a.workedMinutes || 0, lateMin: a.lateMinutes || 0, otMin: a.overtimeMinutes || 0,
+      location: a.location?.label || '', mode: a.mode || 'office'
+    };
+  });
+  exportCSV(all ? 'attendance-all.csv' : `attendance-${monthName(m)}-${y}.csv`, rows,
+    ['name','code','dept','date','checkIn','checkOut','workedMin','lateMin','otMin','location','mode']);
+}
+
+function exportPayrollCSV() {
+  const m = S.selMonth, y = S.selYear;
+  const rows = S.employees.filter(e=>e.status==='active').map(e => {
+    const p = calcPayroll(e, m, y);
+    return {
+      name: e.name, code: e.employeeCode, dept: e.department,
+      workingDays: p.workingDays, presentDays: p.presentDays, paidLeave: p.paidLeaveDays.toFixed(1), lop: p.lopDays.toFixed(1),
+      lateMin: p.totalLateMin, otMin: p.totalOTMin,
+      basic: p.earnings.basic, hra: p.earnings.hra, allowances: p.earnings.allowances, otBonus: p.earnings.otBonus,
+      grossEarnings: p.earnings.total, pf: p.deductions.pf, lopDeduction: p.deductions.lop, lateDeduction: p.deductions.late,
+      totalDeductions: p.deductions.total, netSalary: p.netSalary
+    };
+  });
+  exportCSV(`payroll-${monthName(m)}-${y}.csv`, rows,
+    ['name','code','dept','workingDays','presentDays','paidLeave','lop','lateMin','otMin','basic','hra','allowances','otBonus','grossEarnings','pf','lopDeduction','lateDeduction','totalDeductions','netSalary']);
+}
+
+// ==================== BOOT ====================
+(async function boot() {
+  // Try to restore session from token
+  if (API.token) {
+    try {
+      const me = await API.get('/api/auth/me');
+      S.user = me;
+      S.role = me.role;
+      S.view = me.role === 'admin' ? 'admin' : 'employee';
+      await init();
+    } catch (e) {
+      API.setToken(null);
+    }
+  }
+  render();
+})();
+</script>
+</body>
+</html>
