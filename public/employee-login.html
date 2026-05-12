@@ -139,8 +139,8 @@
                 const result = await API.post('/api/auth/employee-login', { email, password });
                 
                 // Store token and user data
-                localStorage.setItem('hrms_token', result.token);
-                localStorage.setItem('hrms_user', JSON.stringify(result.user));
+                localStorage.setItem('editone_token', result.token);
+                localStorage.setItem('editone_user', JSON.stringify(result.user));
                 
                 // Redirect to main app
                 window.location.href = '/';
