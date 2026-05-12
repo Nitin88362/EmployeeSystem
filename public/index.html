@@ -2682,8 +2682,8 @@ async function onScan(decoded) {
     }
     await refreshData();
   } catch (e) {
+    alert('❌ ' + e.message);
     document.getElementById('scanMsg').innerHTML = `<span style="color:var(--red)">❌ ${e.message}</span>`;
-    render();
   }
 }
 

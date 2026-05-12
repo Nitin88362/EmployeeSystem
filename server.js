@@ -135,7 +135,7 @@ app.get('/api/config', auth(), async (req, res) => {
     officeName: c.office_name || '',
     officeLat: parseFloat(c.office_lat) || null,
     officeLng: parseFloat(c.office_lng) || null,
-    maxDistance: c.max_distance || 10,
+    maxDistance: c.max_distance || 500,
   });
 });
 
@@ -234,7 +234,7 @@ app.post('/api/employees', auth(['admin']), async (req, res) => {
       `INSERT INTO employees (id, employee_code, name, email, password_hash, phone, department, designation,
        join_date, dob, gender, address, emergency_name, emergency_phone, emergency_relation,
        basic, hra, allowances, leave_balance, status) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [id, e.employeeCode || '', e.name, e.email.toLowerCase(), pwHash, e.phone || '',
        e.department || '', e.designation || '', e.joinDate || null, e.dob || null, e.gender || '',
        e.address || '', e.emergency?.name || '', e.emergency?.phone || '', e.emergency?.relation || '',
@@ -395,22 +395,34 @@ app.post('/api/attendance/scan', auth(['employee']), async (req, res) => {
       maxDistance: cfgRows[0].max_distance || 10,
     };
     
-    // 3. STRICT LOCATION VERIFICATION
+    // 3. SMART LOCATION VERIFICATION (accuracy-aware)
     if (!location || !location.lat || !location.lng) {
       return res.status(400).json({ error: '❌ Location nahi mili. GPS allow karein aur dobara try karein.' });
     }
-    if (cfg.officeLat && cfg.officeLng) {
-      const dist = distanceMeters(location.lat, location.lng, cfg.officeLat, cfg.officeLng);
-      if (dist === null) {
-        return res.status(400).json({ error: '❌ Location verify nahi ho payi.' });
-      }
-      if (dist > cfg.maxDistance) {
+    
+    // Only enforce distance check if admin has explicitly set office location
+    // Skip if coords are 0/null OR if maxDistance is 0 (disabled)
+    const officeConfigured = cfg.officeLat && cfg.officeLng && cfg.officeLat !== 0 && cfg.officeLng !== 0;
+    
+    if (officeConfigured && cfg.maxDistance > 0) {
+      const rawDist = distanceMeters(location.lat, location.lng, cfg.officeLat, cfg.officeLng);
+      const accuracy = Math.round(location.accuracy || 0);
+      // Account for GPS uncertainty: if accuracy is 20m and user shows 25m, they could be anywhere 5-45m away
+      // Give benefit of doubt — use the closer edge of the accuracy circle
+      const effectiveDist = Math.max(0, rawDist - accuracy);
+      
+      console.log(`[Scan] Location check: raw=${rawDist}m, accuracy=±${accuracy}m, effective=${effectiveDist}m, allowed=${cfg.maxDistance}m`);
+      
+      if (effectiveDist > cfg.maxDistance) {
         return res.status(400).json({ 
-          error: `❌ Aap office se ${dist}m door hain. Office ke ${cfg.maxDistance}m ke andar aakar scan karein.`,
-          distance: dist,
+          error: `❌ Aap office se ${rawDist}m door hain (GPS accuracy ±${accuracy}m). Office ke ${cfg.maxDistance}m ke andar aakar scan karein.`,
+          distance: rawDist,
+          accuracy: accuracy,
           maxAllowed: cfg.maxDistance
         });
       }
+    } else {
+      console.log('[Scan] Office location not configured, skipping distance check');
     }
     
     // 4. Use IST time
@@ -425,7 +437,7 @@ app.post('/api/attendance/scan', auth(['employee']), async (req, res) => {
       const id = uid();
       await pool.execute(
         `INSERT INTO attendance (id, employee_id, date, check_in, in_status, late_minutes, check_in_location, qr_code, mode)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [id, req.user.id, t, now + ':00', calc.inStatus, calc.lateMinutes, JSON.stringify(location || {}), qrCode, 'office']
       );
       res.json({ action: 'check-in', time: now, ...calc });
@@ -475,7 +487,7 @@ app.post('/api/leaves', auth(['employee']), async (req, res) => {
   try {
     const id = uid();
     await pool.execute(
-      `INSERT INTO leaves (id, employee_id, type, from_date, to_date, half_day, reason, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
+      `INSERT INTO leaves (id, employee_id, type, from_date, to_date, half_day, reason, status) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')`,
       [id, req.user.id, req.body.type, req.body.fromDate, req.body.toDate, req.body.halfDay ? 1 : 0, req.body.reason]
     );
     res.json({ id, success: true });
@@ -581,7 +593,7 @@ app.post('/api/regularizations', auth(['employee']), async (req, res) => {
   try {
     const id = uid();
     await pool.execute(
-      'INSERT INTO regularizations (id, employee_id, date, check_in, check_out, reason, status) VALUES (?, ?, ?, ?, ?, ?, ?, "pending")',
+      'INSERT INTO regularizations (id, employee_id, date, check_in, check_out, reason, status) VALUES (?, ?, ?, ?, ?, ?, "pending")',
       [id, req.user.id, req.body.date, req.body.checkIn || null, req.body.checkOut || null, req.body.reason]
     );
     res.json({ id, success: true });
@@ -731,7 +743,7 @@ app.post('/api/payroll/process', auth(['admin']), async (req, res) => {
     await pool.execute(
       `INSERT INTO payroll (id, employee_id, month, year, working_days, present_days, paid_leave_days, lop_days,
        total_late_min, total_ot_min, earnings, deductions, net_salary, status, processed_by)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)`,
       [id, employeeId, month, year, workingDays, presentDays, paidLeaveDays, lopDays,
        totalLateMin, totalOTMin, JSON.stringify(earnings), JSON.stringify(deductions), netSalary, req.user.name]
     );
@@ -761,7 +773,7 @@ app.put('/api/payroll/:id/pay', auth(['admin']), async (req, res) => {
       `INSERT INTO notices (id, title, body, priority, for_employee_id, posted_by) VALUES (?, ?, ?, 'medium', ?, ?)`,
       [noticeId,
        `💰 Salary Credited · ${monthName} ${p.year}`,
-       `Dear ${empRows[0].name},\n\nAap ki ${monthName} ${p.year} ki salary ${inr(p.net_salary)} ${paymentMode} ke through transfer ho gayi hai${transactionId?` (TXN: ${transactionId})`:''}.\n\nPayslip aap apne Payslips tab mein dekh sakte hain.${paymentRemarks?`\n\nNote: ${paymentRemarks}`:''}\n\n— HR, Editone International`,
+       `Dear ${empRows[0].name},\n\nAap ki ${monthName} ${p.year} ki salary ${inr(p.netSalary)} ${paymentMode} ke through transfer ho gayi hai${transactionId?` (TXN: ${transactionId})`:''}.\n\nPayslip aap apne Payslips tab mein dekh sakte hain.${paymentRemarks?`\n\nNote: ${paymentRemarks}`:''}\n\n— HR, Editone International`,
        p.employee_id, req.user.name]
     );
     
@@ -785,7 +797,8 @@ app.get('*', (req, res) => {
 // AUTO-BOOTSTRAP (creates tables on first run)
 // ============================================================
 async function bootstrap() {
-  console.log('🔧 Checking database tables...');  
+  console.log('🔧 Checking database tables...');
+  
   // Check if tables exist
   try {
     const [r] = await pool.execute("SELECT COUNT(*) as c FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'admin'");
@@ -795,7 +808,7 @@ async function bootstrap() {
     }
   } catch (e) { /* DB might be empty, continue */ }
   
-  console.log('📦 Creating tables (first run)...');  
+  console.log('📦 Creating tables (first run)...');
   
   // Create all tables
   const tables = [
@@ -954,10 +967,10 @@ async function bootstrap() {
   for (const sql of tables) {
     await pool.query(sql);
   }
-  console.log('✓ All tables created');  
+  console.log('✓ All tables created');
   
   // Seed default data
-  console.log('🌱 Seeding default data...');  
+  console.log('🌱 Seeding default data...');
   
   const adminUser = process.env.ADMIN_USERNAME || 'admin';
   const adminPass = process.env.ADMIN_PASSWORD || 'admin123';
@@ -967,7 +980,7 @@ async function bootstrap() {
     [adminUser, adminHash, process.env.ADMIN_NAME || 'Dr. Pankaj Jagya', process.env.ADMIN_EMAIL || 'admin@editone.in']
   );
   
-  await pool.execute('INSERT IGNORE INTO config (id) VALUES (1)');  
+  await pool.execute('INSERT IGNORE INTO config (id) VALUES (1)');
   
   // MIGRATION: update default max_distance from old 500 to new 10 (only if still default)
   await pool.execute('UPDATE config SET max_distance = 10 WHERE id = 1 AND max_distance = 500');
@@ -1013,7 +1026,7 @@ async function bootstrap() {
   await pool.execute(
     `INSERT IGNORE INTO employees (id, employee_code, name, email, password_hash, phone, department, designation,
      join_date, dob, gender, address, emergency_name, emergency_phone, emergency_relation,
-     basic, hra, allowances, leave_balance, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+     basic, hra, allowances, leave_balance, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     ['emp_demo', 'EDT001', 'Demo Employee', 'demo@editone.in', demoHash, '9999999999',
      'Digital Marketing', 'Marketing Executive', new Date().toISOString().split('T')[0], '1995-05-15', 'Male',
      'Naraina Industrial Area, New Delhi', 'Family Member', '9999999999', 'Parent',
