@@ -395,34 +395,20 @@ app.post('/api/attendance/scan', auth(['employee']), async (req, res) => {
       maxDistance: cfgRows[0].max_distance || 10,
     };
     
-    // 3. SMART LOCATION VERIFICATION (accuracy-aware)
-    if (!location || !location.lat || !location.lng) {
-      return res.status(400).json({ error: '❌ Location nahi mili. GPS allow karein aur dobara try karein.' });
-    }
-    
-    // Only enforce distance check if admin has explicitly set office location
-    // Skip if coords are 0/null OR if maxDistance is 0 (disabled)
-    const officeConfigured = cfg.officeLat && cfg.officeLng && cfg.officeLat !== 0 && cfg.officeLng !== 0;
-    
-    if (officeConfigured && cfg.maxDistance > 0) {
-      const rawDist = distanceMeters(location.lat, location.lng, cfg.officeLat, cfg.officeLng);
-      const accuracy = Math.round(location.accuracy || 0);
-      // Account for GPS uncertainty: if accuracy is 20m and user shows 25m, they could be anywhere 5-45m away
-      // Give benefit of doubt — use the closer edge of the accuracy circle
-      const effectiveDist = Math.max(0, rawDist - accuracy);
-      
-      console.log(`[Scan] Location check: raw=${rawDist}m, accuracy=±${accuracy}m, effective=${effectiveDist}m, allowed=${cfg.maxDistance}m`);
-      
-      if (effectiveDist > cfg.maxDistance) {
-        return res.status(400).json({ 
-          error: `❌ Aap office se ${rawDist}m door hain (GPS accuracy ±${accuracy}m). Office ke ${cfg.maxDistance}m ke andar aakar scan karein.`,
-          distance: rawDist,
-          accuracy: accuracy,
-          maxAllowed: cfg.maxDistance
-        });
+    // 3. LOCATION CAPTURE (no blocking — just record for admin audit)
+    // Location distance info is logged and visible in admin panel's attendance log.
+    // If admin wants strict distance enforcement in future, can be re-enabled per setting.
+    if (location && location.lat && location.lng) {
+      const officeConfigured = cfg.officeLat && cfg.officeLng && cfg.officeLat !== 0 && cfg.officeLng !== 0;
+      if (officeConfigured) {
+        const rawDist = distanceMeters(location.lat, location.lng, cfg.officeLat, cfg.officeLng);
+        const accuracy = Math.round(location.accuracy || 0);
+        console.log(`[Scan] Location: ${rawDist}m from office (GPS accuracy ±${accuracy}m)`);
+      } else {
+        console.log('[Scan] Office location not configured');
       }
     } else {
-      console.log('[Scan] Office location not configured, skipping distance check');
+      console.log('[Scan] No location captured (GPS not allowed)');
     }
     
     // 4. Use IST time
@@ -773,7 +759,7 @@ app.put('/api/payroll/:id/pay', auth(['admin']), async (req, res) => {
       `INSERT INTO notices (id, title, body, priority, for_employee_id, posted_by) VALUES (?, ?, ?, 'medium', ?, ?)`,
       [noticeId,
        `💰 Salary Credited · ${monthName} ${p.year}`,
-       `Dear ${empRows[0].name},\n\nAap ki ${monthName} ${p.year} ki salary ${inr(p.netSalary)} ${paymentMode} ke through transfer ho gayi hai${transactionId?` (TXN: ${transactionId})`:''}.\n\nPayslip aap apne Payslips tab mein dekh sakte hain.${paymentRemarks?`\n\nNote: ${paymentRemarks}`:''}\n\n— HR, Editone International`,
+       `Dear ${empRows[0].name},\n\nAap ki ${monthName} ${p.year} ki salary ${inr(p.net_salary)} ${paymentMode} ke through transfer ho gayi hai${transactionId?` (TXN: ${transactionId})`:''}.\n\nPayslip aap apne Payslips tab mein dekh sakte hain.${paymentRemarks?`\n\nNote: ${paymentRemarks}`:''}\n\n— HR, Editone International`,
        p.employee_id, req.user.name]
     );
     
@@ -1001,8 +987,8 @@ async function bootstrap() {
     ['dept_pub', 'Publishing', ''],
     ['dept_wd', 'Web Development', ''],
     ['dept_ai', 'AI Automation', ''],
-    ['dept_sales', 'Sales', ''],
-    ['dept_ops', 'Operations', ''],
+    ['dept_sales', 'Sales','],
+    ['dept_ops', 'Operations','],
     ['dept_kids', 'Editone Kids Club', ''],
   ];
   for (const d of depts) {
