@@ -41,9 +41,24 @@ if (process.env.DB_SSL === 'true' || process.env.DB_SSL === '1' ||
 
 const pool = mysql.createPool(dbConfig);
 
-// Helpers
+// Helpers — IST timezone (Render server runs in UTC, we need India time)
 const uid = () => Date.now().toString(36) + crypto.randomBytes(3).toString('hex');
-const todayStr = () => new Date().toISOString().split('T')[0];
+const todayStr = () => new Intl.DateTimeFormat('sv-SE', {
+  timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit'
+}).format(new Date());
+const nowTimeIST = () => new Intl.DateTimeFormat('en-GB', {
+  timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: false
+}).format(new Date());
+
+// Haversine distance in meters
+function distanceMeters(lat1, lng1, lat2, lng2) {
+  if (!lat1 || !lat2) return null;
+  const R = 6371000;
+  const toRad = x => x * Math.PI / 180;
+  const dLat = toRad(lat2 - lat1), dLng = toRad(lng2 - lng1);
+  const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng/2)**2;
+  return Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
+}
 
 // ============================================================
 // AUTH MIDDLEWARE
@@ -120,7 +135,7 @@ app.get('/api/config', auth(), async (req, res) => {
     officeName: c.office_name || '',
     officeLat: parseFloat(c.office_lat) || null,
     officeLng: parseFloat(c.office_lng) || null,
-    maxDistance: c.max_distance || 500,
+    maxDistance: c.max_distance || 10,
   });
 });
 
@@ -219,7 +234,7 @@ app.post('/api/employees', auth(['admin']), async (req, res) => {
       `INSERT INTO employees (id, employee_code, name, email, password_hash, phone, department, designation,
        join_date, dob, gender, address, emergency_name, emergency_phone, emergency_relation,
        basic, hra, allowances, leave_balance, status) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [id, e.employeeCode || '', e.name, e.email.toLowerCase(), pwHash, e.phone || '',
        e.department || '', e.designation || '', e.joinDate || null, e.dob || null, e.gender || '',
        e.address || '', e.emergency?.name || '', e.emergency?.phone || '', e.emergency?.relation || '',
@@ -361,22 +376,47 @@ app.post('/api/attendance/scan', auth(['employee']), async (req, res) => {
   try {
     const { qrCode, location } = req.body;
     const t = todayStr();
-    // Verify QR
-    const [qrRows] = await pool.execute('SELECT code FROM qr_codes WHERE date = ?', [t]);
-    if (qrRows.length === 0 || qrRows[0].code !== qrCode) return res.status(400).json({ error: 'Invalid or expired QR code' });
     
-    // Get config
+    // 1. Verify QR
+    const [qrRows] = await pool.execute('SELECT code FROM qr_codes WHERE date = ?', [t]);
+    if (qrRows.length === 0 || qrRows[0].code !== qrCode) {
+      return res.status(400).json({ error: 'Invalid or expired QR code' });
+    }
+    
+    // 2. Get config (need office location for verification)
     const [cfgRows] = await pool.execute('SELECT * FROM config WHERE id = 1');
     const cfg = {
       officeIn: cfgRows[0].office_in.substring(0,5),
       officeOut: cfgRows[0].office_out.substring(0,5),
       overtimeCap: cfgRows[0].overtime_cap.substring(0,5),
       gracePeriod: cfgRows[0].grace_period,
+      officeLat: parseFloat(cfgRows[0].office_lat),
+      officeLng: parseFloat(cfgRows[0].office_lng),
+      maxDistance: cfgRows[0].max_distance || 10,
     };
     
-    const now = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false });
+    // 3. STRICT LOCATION VERIFICATION
+    if (!location || !location.lat || !location.lng) {
+      return res.status(400).json({ error: '❌ Location nahi mili. GPS allow karein aur dobara try karein.' });
+    }
+    if (cfg.officeLat && cfg.officeLng) {
+      const dist = distanceMeters(location.lat, location.lng, cfg.officeLat, cfg.officeLng);
+      if (dist === null) {
+        return res.status(400).json({ error: '❌ Location verify nahi ho payi.' });
+      }
+      if (dist > cfg.maxDistance) {
+        return res.status(400).json({ 
+          error: `❌ Aap office se ${dist}m door hain. Office ke ${cfg.maxDistance}m ke andar aakar scan karein.`,
+          distance: dist,
+          maxAllowed: cfg.maxDistance
+        });
+      }
+    }
     
-    // Check existing
+    // 4. Use IST time
+    const now = nowTimeIST();
+    
+    // 5. Check existing record
     const [existing] = await pool.execute('SELECT * FROM attendance WHERE employee_id = ? AND date = ?', [req.user.id, t]);
     
     if (existing.length === 0) {
@@ -385,7 +425,7 @@ app.post('/api/attendance/scan', auth(['employee']), async (req, res) => {
       const id = uid();
       await pool.execute(
         `INSERT INTO attendance (id, employee_id, date, check_in, in_status, late_minutes, check_in_location, qr_code, mode)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [id, req.user.id, t, now + ':00', calc.inStatus, calc.lateMinutes, JSON.stringify(location || {}), qrCode, 'office']
       );
       res.json({ action: 'check-in', time: now, ...calc });
@@ -435,7 +475,7 @@ app.post('/api/leaves', auth(['employee']), async (req, res) => {
   try {
     const id = uid();
     await pool.execute(
-      `INSERT INTO leaves (id, employee_id, type, from_date, to_date, half_day, reason, status) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')`,
+      `INSERT INTO leaves (id, employee_id, type, from_date, to_date, half_day, reason, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
       [id, req.user.id, req.body.type, req.body.fromDate, req.body.toDate, req.body.halfDay ? 1 : 0, req.body.reason]
     );
     res.json({ id, success: true });
@@ -541,7 +581,7 @@ app.post('/api/regularizations', auth(['employee']), async (req, res) => {
   try {
     const id = uid();
     await pool.execute(
-      'INSERT INTO regularizations (id, employee_id, date, check_in, check_out, reason, status) VALUES (?, ?, ?, ?, ?, ?, "pending")',
+      'INSERT INTO regularizations (id, employee_id, date, check_in, check_out, reason, status) VALUES (?, ?, ?, ?, ?, ?, ?, "pending")',
       [id, req.user.id, req.body.date, req.body.checkIn || null, req.body.checkOut || null, req.body.reason]
     );
     res.json({ id, success: true });
@@ -573,7 +613,7 @@ app.put('/api/regularizations/:id/decision', auth(['admin']), async (req, res) =
           `INSERT INTO attendance (id, employee_id, date, check_in, check_out, in_status, out_status,
            late_minutes, overtime_minutes, early_out_minutes, worked_minutes,
            check_in_location, mode, manual_by, manual_reason)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [id, r.employee_id, r.date, inT ? inT + ':00' : null, outT ? outT + ':00' : null,
            calc.inStatus, calc.outStatus, calc.lateMinutes, calc.overtimeMinutes, calc.earlyOutMinutes, calc.workedMinutes,
            JSON.stringify({label: 'Manually regularized', lat: 0, lng: 0}), 'manual', req.user.name, r.reason]
@@ -753,7 +793,8 @@ async function bootstrap() {
       console.log('✓ Tables already exist');
       return;
     }
-  } catch (e) { /* DB might be empty, continue */ }  
+  } catch (e) { /* DB might be empty, continue */ }
+  
   console.log('📦 Creating tables (first run)...');  
   
   // Create all tables
@@ -776,7 +817,7 @@ async function bootstrap() {
       office_name VARCHAR(200) DEFAULT 'Editone International, Naraina',
       office_lat DECIMAL(10,7) DEFAULT 28.6448000,
       office_lng DECIMAL(10,7) DEFAULT 77.1391000,
-      max_distance INT DEFAULT 500,
+      max_distance INT DEFAULT 10,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     )`,
     `CREATE TABLE IF NOT EXISTS leave_types (
@@ -917,6 +958,7 @@ async function bootstrap() {
   
   // Seed default data
   console.log('🌱 Seeding default data...');  
+  
   const adminUser = process.env.ADMIN_USERNAME || 'admin';
   const adminPass = process.env.ADMIN_PASSWORD || 'admin123';
   const adminHash = await bcrypt.hash(adminPass, 10);
@@ -926,6 +968,10 @@ async function bootstrap() {
   );
   
   await pool.execute('INSERT IGNORE INTO config (id) VALUES (1)');  
+  
+  // MIGRATION: update default max_distance from old 500 to new 10 (only if still default)
+  await pool.execute('UPDATE config SET max_distance = 10 WHERE id = 1 AND max_distance = 500');
+  
   const leaveTypes = [
     ['casual', 'Casual Leave', 12, 'yellow', 1, 1],
     ['sick', 'Sick Leave', 12, 'red', 1, 2],
