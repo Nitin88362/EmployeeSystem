@@ -2192,7 +2192,7 @@ function modalEditProfile() {
 function attachHandlers() {
   // Landing
   document.getElementById('goAdmin')?.addEventListener('click', () => { S.view='adminLogin'; render(); });
-  document.getElementById('goEmp')?.addEventListener('click', () => { S.view='empLogin'; render(); });
+  document.getElementById('goEmp')?.addEventListener('click', () => { window.location.href = '/employee-login.html'; });
   document.getElementById('backHome')?.addEventListener('click', () => { S.view='landing'; render(); });
   
   // Admin login
